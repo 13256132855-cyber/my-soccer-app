@@ -1,38 +1,51 @@
+
 import streamlit as st
 import numpy as np
 
-# 1. 手机端页面大字号优化
-st.set_page_config(page_title="AI足球决策", layout="centered")
-st.title("🛡️ 智胜 AI 足球模拟器")
-st.caption("蒙特卡洛引擎 | 手机端专属纯净版")
+st.set_page_config(page_title="足球概率模拟器", layout="centered")
 
-# 2. 模拟计算引擎
-def run_simulation(h_xg, a_xg, n=10000):
-    # 用泊松分布模拟10,000次比赛进球数
-    h_goals = np.random.poisson(h_xg, n)
-    a_goals = np.random.poisson(a_xg, n)
-    
-    # 统计胜平负概率
-    h_win = (h_goals > a_goals).mean()
-    draw = (h_goals == a_goals).mean()
-    a_win = (h_goals < a_goals).mean()
-    return h_win, draw, a_win
+st.title("⚽ 智胜 AI 足球模拟器")
+st.write("通过蒙特卡洛算法，输入两队进球率来模拟比赛结果。")
 
-# 3. 手机端卡片式交互
-with st.container():
-    st.subheader("📊 输入两队预期进球 (xG)")
+# 侧边栏输入
+st.sidebar.header("📊 输入比赛基础数据")
+home_lambda = st.sidebar.slider("主队预期进球率 (Poisson)", 0.1, 5.0, 1.5, 0.1)
+away_lambda = st.sidebar.slider("客队预期进球率 (Poisson)", 0.1, 5.0, 1.2, 0.1)
+sim_count = st.sidebar.selectbox("模拟比赛场次", [1000, 10000, 50000], index=1)
+
+if st.sidebar.button("🎮 开始模拟分析", use_container_width=True):
+    # 蒙特卡洛模拟
+    home_goals = np.random.poisson(home_lambda, sim_count)
+    away_goals = np.random.poisson(away_lambda, sim_count)
     
-    # 手机端大滑块，极易操作
-    h_xg = st.slider("🏠 主队进攻权重 (xG)", 0.5, 4.0, 1.5, step=0.1)
-    a_xg = st.slider("🚌 客队进攻权重 (xG)", 0.5, 4.0, 1.2, step=0.1)
+    home_wins = np.sum(home_goals > away_goals)
+    draws = np.sum(home_goals == away_goals)
+    away_wins = np.sum(home_goals < away_goals)
     
-    st.divider()
+    # 转换百分比
+    hw_prob = (home_wins / sim_count) * 100
+    d_prob = (draws / sim_count) * 100
+    aw_prob = (away_wins / sim_count) * 100
     
-    # 点击按钮开始模拟
-    if st.button("🚀 开始 10,000 次模拟"):
-        hw, d, aw = run_simulation(h_xg, a_xg)
-        
-        # 结果展示
-        col1, col2, col3 = st.columns(3)
-        col1.metric("🏠 主胜率", f"{hw:.1%}")
-        col2.metric("🤝 平局率", f"{d:
+    st.success("🎉 模拟完成！结果如下：")
+    
+    # 指标展示
+    col1, col2, col3 = st.columns(3)
+    col1.metric("🏠 主胜率", f"{hw_prob:.2f}%")
+    col2.metric("🤝 平局率", f"{d_prob:.2f}%")
+    col3.metric("🚌 客胜率", f"{aw_prob:.2f}%")
+    
+    # 详细表格
+    st.subheader("📋 常见比分概率预测")
+    scores = {}
+    for h in range(4):
+        for a in range(4):
+            match_count = np.sum((home_goals == h) & (away_goals == a))
+            prob = (match_count / sim_count) * 100
+            scores[f"{h}:{a}"] = f"{prob:.2f}%"
+            
+    # 展示前5个高频比分
+    sorted_scores = sorted(scores.items(), key=lambda x: float(x[1].replace('%', '')), reverse=True)[:5]
+    
+    for score, p in sorted_scores:
+        st.write(f"比分 **{score}** 的预计发生概率：**{p}**")

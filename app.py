@@ -3,8 +3,8 @@ import numpy as np
 
 st.set_page_config(page_title="Jingcai Full Odds Analyzer", layout="wide")
 
-st.title("Jingcai Full Odds Analyzer v2.0")
-st.write("Input all 5 categories of odds to find anomalies.")
+st.title("Jingcai Full Odds Analyzer v3.0")
+st.write("Input all odds to calculate the most probable scores.")
 st.divider()
 
 # 1. 胜平负 / 让球胜平负
@@ -14,7 +14,7 @@ with st.expander("📊 1. 胜平负 / 让球 赔率录入", expanded=True):
     spf_p = col2.number_input("平 (Draw)", 1.0, 1000.0, 3.30, 0.01)
     spf_f = col3.number_input("负 (Away Win)", 1.0, 1000.0, 1.75, 0.01)
     
-    st.write("让球盘口 (+1 / -1 等)")
+    st.write("让球盘口")
     col4, col5, col6 = st.columns(3)
     rq_s = col4.number_input("让胜 (Handicap Home)", 1.0, 1000.0, 1.82, 0.01)
     rq_p = col5.number_input("让平 (Handicap Draw)", 1.0, 1000.0, 3.40, 0.01)
@@ -52,7 +52,7 @@ with st.expander("⏳ 3. 半全场赔率录入", expanded=False):
     b_ff = b_col9.number_input("负负 (L/L)", 1.0, 1000.0, 2.70, 0.01)
 
 # 4. 比分 (31项)
-with st.expander("🏁 4. 正确比分赔率录入", expanded=False):
+with st.expander("🏁 4. 正确比分赔率录入", expanded=True):
     # 主胜比分
     st.write("【主胜比分】")
     sc1, sc2, sc3, sc4, sc5 = st.columns(5)
@@ -109,11 +109,10 @@ st.divider()
 if st.button("立即分析全赔率 (Analyze)", use_container_width=True):
     st.success("数据载入成功！(Data Loaded)")
     
-    # 计算返还率
+    # 胜平负计算
     sum_prob = (1/spf_s) + (1/spf_p) + (1/spf_f)
     payout = round((1 / sum_prob) * 100, 2)
     
-    # 真实概率
     real_s = round(((1/spf_s) / sum_prob) * 100, 2)
     real_p = round(((1/spf_p) / sum_prob) * 100, 2)
     real_f = round(((1/spf_f) / sum_prob) * 100, 2)
@@ -122,24 +121,58 @@ if st.button("立即分析全赔率 (Analyze)", use_container_width=True):
     st.write(f"该场比赛竞彩返还率约为: **{payout}%**")
     
     c1, c2, c3 = st.columns(3)
-    c1.metric("主胜真实率 (Home Prob)", f"{real_s}%")
-    c2.metric("平局真实率 (Draw Prob)", f"{real_p}%")
-    c3.metric("客胜真实率 (Away Prob)", f"{real_f}%")
+    c1.metric("主胜真实率", f"{real_s}%")
+    c2.metric("平局真实率", f"{real_p}%")
+    c3.metric("客胜真实率", f"{real_f}%")
     
     st.divider()
     
-    # 交叉验证逻辑
+    # 【核心升级：推算最可能比分】
+    st.subheader("🎯 机构赔率暗示：最可能出现的比分 Top 5")
+    
+    # 将31个比分装入字典
+    scores_dict = {
+        "1:0": 1/s_10, "2:0": 1/s_20, "2:1": 1/s_21, "3:0": 1/s_30, "3:1": 1/s_31,
+        "3:2": 1/s_32, "4:0": 1/s_40, "4:1": 1/s_41, "4:2": 1/s_42, "5:0": 1/s_50,
+        "5:1": 1/s_51, "5:2": 1/s_52, "胜其他": 1/s_swin_other,
+        "0:0": 1/s_00, "1:1": 1/s_11, "2:2": 1/s_22, "3:3": 1/s_33, "平其他": 1/s_draw_other,
+        "0:1": 1/s_01, "0:2": 1/s_02, "1:2": 1/s_12, "0:3": 1/s_03, "1:3": 1/s_13,
+        "2:3": 1/s_23, "0:4": 1/s_04, "1:4": 1/s_14, "2:4": 1/s_24, "0:5": 1/s_05,
+        "1:5": 1/s_15, "2:5": 1/s_25, "负其他": 1/s_lose_other
+    }
+    
+    # 计算比分玩法的总概率（用于去水份）
+    total_score_prob = sum(scores_dict.values())
+    
+    # 转换为真实概率并排序
+    sorted_scores = []
+    for score_name, raw_prob in scores_dict.items():
+        real_score_prob = (raw_prob / total_score_prob) * 100
+        sorted_scores.append((score_name, round(real_score_prob, 2)))
+        
+    sorted_scores.sort(key=lambda x: x[1], reverse=True)
+    
+    # 在网页上展示前5名
+    col_a, col_b, col_c, col_d, col_e = st.columns(5)
+    cols = [col_a, col_b, col_c, col_d, col_e]
+    
+    for i in range(5):
+        score_title = f"第 {i+1} 可能性"
+        score_str = f"{sorted_scores[i][0]} (概率: {sorted_scores[i][1]}%)"
+        cols[i].metric(score_title, sorted_scores[i][0], f"概率 {sorted_scores[i][1]}%")
+
+    st.divider()
+    
+    # 异常坐标初步筛查
     st.subheader("🛡️ 异常坐标初步筛查 (Anomalies Check)")
     anomalies = 0
     
-    # 逻辑1：0球与比分0:0的概率冲突
     prob_0g = 1 / g0
     prob_00sc = 1 / s_00
     if abs(prob_0g - prob_00sc) > 0.03:
         st.warning("⚠️ 警告：总进球数0球 与 比分0:0 的赔率存在数学剪刀差，机构必有一边在诱导。")
         anomalies += 1
         
-    # 逻辑2：总进球大球偏向和比分的冲突
     prob_big = (1/g3) + (1/g4) + (1/g5) + (1/g6) + (1/g7)
     if prob_big > 0.6 and (s_10 < 7.0 or s_01 < 7.0):
         st.warning("⚠️ 警告：总进球严重倾向3球及以上，但 1:0 或 0:1 小比分赔率被打压得很低，存在诱导小比分可能。")

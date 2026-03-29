@@ -1,58 +1,38 @@
+
 import streamlit as st
 import numpy as np
+import scipy.stats as stats
 
-st.set_page_config(page_title="Jingcai Full Odds Analyzer", layout="wide")
+st.set_page_config(page_title="Jingcai Full Odds Analyzer v4.0", layout="wide")
 
-st.title("Jingcai Full Odds Analyzer v3.0")
-st.write("Input all odds to calculate the most probable scores.")
+st.title("🔥 竞彩全赔率 + 泊松分布复合分析器 v4.0")
+st.write("结合机构赔率去水概率与数学泊松分布，深度挖掘比分底牌。")
 st.divider()
 
-# 1. 胜平负 / 让球胜平负
-with st.expander("📊 1. 胜平负 / 让球 赔率录入", expanded=True):
+# ================= 侧边栏：泊松分布预期输入 =================
+st.sidebar.header("📊 泊松模型：预期进球设定")
+st.sidebar.write("根据两队近期攻防，输入你预期的进球率：")
+home_exp = st.sidebar.slider("主队预期进球数", 0.1, 5.0, 1.5, 0.05)
+away_exp = st.sidebar.slider("客队预期进球数", 0.1, 5.0, 1.2, 0.05)
+
+# 计算泊松分布比分矩阵 (0-5球)
+poisson_matrix = np.zeros((6, 6))
+for i in range(6):
+    for j in range(6):
+        prob_i = stats.poisson.pmf(i, home_exp)
+        prob_j = stats.poisson.pmf(j, away_exp)
+        poisson_matrix[i, j] = prob_i * prob_j
+
+# ================= 主界面：赔率录入 =================
+# 1. 胜平负
+with st.expander("📊 1. 基础胜平负赔率录入", expanded=True):
     col1, col2, col3 = st.columns(3)
     spf_s = col1.number_input("胜 (Home Win)", 1.0, 1000.0, 3.92, 0.01)
     spf_p = col2.number_input("平 (Draw)", 1.0, 1000.0, 3.30, 0.01)
     spf_f = col3.number_input("负 (Away Win)", 1.0, 1000.0, 1.75, 0.01)
-    
-    st.write("让球盘口")
-    col4, col5, col6 = st.columns(3)
-    rq_s = col4.number_input("让胜 (Handicap Home)", 1.0, 1000.0, 1.82, 0.01)
-    rq_p = col5.number_input("让平 (Handicap Draw)", 1.0, 1000.0, 3.40, 0.01)
-    rq_f = col6.number_input("让负 (Handicap Away)", 1.0, 1000.0, 3.50, 0.01)
 
-# 2. 总进球数 (0-7+球)
-with st.expander("⚽ 2. 总进球数赔率录入", expanded=False):
-    g_col1, g_col2, g_col3, g_col4 = st.columns(4)
-    g0 = g_col1.number_input("0 球", 1.0, 1000.0, 12.00, 0.01)
-    g1 = g_col2.number_input("1 球", 1.0, 1000.0, 4.75, 0.01)
-    g2 = g_col3.number_input("2 球", 1.0, 1000.0, 3.45, 0.01)
-    g3 = g_col4.number_input("3 球", 1.0, 1000.0, 3.60, 0.01)
-    
-    g_col5, g_col6, g_col7, g_col8 = st.columns(4)
-    g4 = g_col5.number_input("4 球", 1.0, 1000.0, 5.50, 0.01)
-    g5 = g_col6.number_input("5 球", 1.0, 1000.0, 9.50, 0.01)
-    g6 = g_col7.number_input("6 球", 1.0, 1000.0, 16.00, 0.01)
-    g7 = g_col8.number_input("7+ 球", 1.0, 1000.0, 24.00, 0.01)
-
-# 3. 半全场 (9项)
-with st.expander("⏳ 3. 半全场赔率录入", expanded=False):
-    b_col1, b_col2, b_col3 = st.columns(3)
-    b_ss = b_col1.number_input("胜胜 (W/W)", 1.0, 1000.0, 6.85, 0.01)
-    b_sp = b_col2.number_input("胜平 (W/D)", 1.0, 1000.0, 15.00, 0.01)
-    b_sf = b_col3.number_input("胜负 (W/L)", 1.0, 1000.0, 25.00, 0.01)
-    
-    b_col4, b_col5, b_col6 = st.columns(3)
-    b_ps = b_col4.number_input("平胜 (D/W)", 1.0, 1000.0, 8.50, 0.01)
-    b_pp = b_col5.number_input("平平 (D/D)", 1.0, 1000.0, 5.30, 0.01)
-    b_pf = b_col6.number_input("平负 (D/L)", 1.0, 1000.0, 4.30, 0.01)
-    
-    b_col7, b_col8, b_col9 = st.columns(3)
-    b_fs = b_col7.number_input("负胜 (L/W)", 1.0, 1000.0, 40.00, 0.01)
-    b_fp = b_col8.number_input("负平 (L/D)", 1.0, 1000.0, 15.00, 0.01)
-    b_ff = b_col9.number_input("负负 (L/L)", 1.0, 1000.0, 2.70, 0.01)
-
-# 4. 比分 (31项)
-with st.expander("🏁 4. 正确比分赔率录入", expanded=True):
+# 2. 比分 (31项)
+with st.expander("🏁 2. 竞彩比分赔率录入", expanded=True):
     # 主胜比分
     st.write("【主胜比分】")
     sc1, sc2, sc3, sc4, sc5 = st.columns(5)
@@ -106,31 +86,12 @@ with st.expander("🏁 4. 正确比分赔率录入", expanded=True):
 
 st.divider()
 
-if st.button("立即分析全赔率 (Analyze)", use_container_width=True):
-    st.success("数据载入成功！(Data Loaded)")
-    
-    # 胜平负计算
+if st.button("🚀 启动复合交叉分析", use_container_width=True):
+    # 1. 基础概率计算
     sum_prob = (1/spf_s) + (1/spf_p) + (1/spf_f)
     payout = round((1 / sum_prob) * 100, 2)
     
-    real_s = round(((1/spf_s) / sum_prob) * 100, 2)
-    real_p = round(((1/spf_p) / sum_prob) * 100, 2)
-    real_f = round(((1/spf_f) / sum_prob) * 100, 2)
-    
-    st.subheader("📊 竞彩返还率与真实概率")
-    st.write(f"该场比赛竞彩返还率约为: **{payout}%**")
-    
-    c1, c2, c3 = st.columns(3)
-    c1.metric("主胜真实率", f"{real_s}%")
-    c2.metric("平局真实率", f"{real_p}%")
-    c3.metric("客胜真实率", f"{real_f}%")
-    
-    st.divider()
-    
-    # 【核心升级：推算最可能比分】
-    st.subheader("🎯 机构赔率暗示：最可能出现的比分 Top 5")
-    
-    # 将31个比分装入字典
+    # 2. 31个比分去水计算
     scores_dict = {
         "1:0": 1/s_10, "2:0": 1/s_20, "2:1": 1/s_21, "3:0": 1/s_30, "3:1": 1/s_31,
         "3:2": 1/s_32, "4:0": 1/s_40, "4:1": 1/s_41, "4:2": 1/s_42, "5:0": 1/s_50,
@@ -140,43 +101,78 @@ if st.button("立即分析全赔率 (Analyze)", use_container_width=True):
         "2:3": 1/s_23, "0:4": 1/s_04, "1:4": 1/s_14, "2:4": 1/s_24, "0:5": 1/s_05,
         "1:5": 1/s_15, "2:5": 1/s_25, "负其他": 1/s_lose_other
     }
-    
-    # 计算比分玩法的总概率（用于去水份）
     total_score_prob = sum(scores_dict.values())
     
-    # 转换为真实概率并排序
-    sorted_scores = []
-    for score_name, raw_prob in scores_dict.items():
-        real_score_prob = (raw_prob / total_score_prob) * 100
-        sorted_scores.append((score_name, round(real_score_prob, 2)))
+    # 转换为真实去水概率
+    real_scores = {k: round((v / total_score_prob) * 100, 2) for k, v in scores_dict.items()}
+    
+    # ================= 模块一：比分区间聚类 =================
+    st.subheader("📊 模块一：三路大军比分聚类 (Cluster Analysis)")
+    
+    home_cluster = sum([real_scores[k] for k in ["1:0", "2:0", "2:1", "3:0", "3:1", "3:2", "4:0", "4:1", "4:2", "5:0", "5:1", "5:2", "胜其他"]])
+    draw_cluster = sum([real_scores[k] for k in ["0:0", "1:1", "2:2", "3:3", "平其他"]])
+    away_cluster = sum([real_scores[k] for k in ["0:1", "0:2", "1:2", "0:3", "1:3", "2:3", "0:4", "1:4", "2:4", "0:5", "1:5", "2:5", "负其他"]])
+    
+    col_h, col_d, col_a = st.columns(3)
+    col_h.metric("主胜所有比分总概率", f"{round(home_cluster, 2)}%")
+    col_d.metric("平局所有比分总概率", f"{round(draw_cluster, 2)}%")
+    col_a.metric("客胜所有比分总概率", f"{round(away_cluster, 2)}%")
+    
+    # ================= 模块二：双模型Top比分对碰 =================
+    st.subheader("🎯 模块二：双模型最可能比分 PK")
+    
+    # 赔率模型Top 3
+    sorted_odds = sorted(real_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+    
+    # 泊松模型Top 3
+    poisson_scores = {}
+    score_mapping = {
+        "0:0": (0,0), "1:0": (1,0), "2:0": (2,0), "3:0": (3,0), "4:0": (4,0), "5:0": (5,0),
+        "0:1": (0,1), "1:1": (1,1), "2:1": (2,1), "3:1": (3,1), "4:1": (4,1), "5:1": (5,1),
+        "0:2": (0,2), "1:2": (1,2), "2:2": (2,2), "3:2": (3,2), "4:2": (4,2), "5:2": (5,2),
+        "0:3": (0,3), "1:3": (1,3), "2:3": (2,3), "3:3": (3,3),
+        "0:4": (0,4), "1:4": (1,4), "2:4": (2,4),
+        "0:5": (0,5), "1:5": (1,5), "2:5": (2,5)
+    }
+    
+    for score_str, (h, a) in score_mapping.items():
+        poisson_scores[score_str] = round(poisson_matrix[h, a] * 100, 2)
         
-    sorted_scores.sort(key=lambda x: x[1], reverse=True)
+    sorted_poisson = sorted(poisson_scores.items(), key=lambda x: x[1], reverse=True)[:3]
     
-    # 在网页上展示前5名
-    col_a, col_b, col_c, col_d, col_e = st.columns(5)
-    cols = [col_a, col_b, col_c, col_d, col_e]
+    col_m1, col_m2 = st.columns(2)
     
-    for i in range(5):
-        score_title = f"第 {i+1} 可能性"
-        score_str = f"{sorted_scores[i][0]} (概率: {sorted_scores[i][1]}%)"
-        cols[i].metric(score_title, sorted_scores[i][0], f"概率 {sorted_scores[i][1]}%")
-
+    with col_m1:
+        st.info("🏦 机构赔率推算 Top 3 (金钱意志)")
+        for i, (sc, pr) in enumerate(sorted_odds):
+            st.write(f"**No.{i+1}** —— 比分 `{sc}` (概率 `{pr}%`)")
+            
+    with col_m2:
+        st.success("🔢 泊松数学模型 Top 3 (纸面实力)")
+        for i, (sc, pr) in enumerate(sorted_poisson):
+            st.write(f"**No.{i+1}** —— 比分 `{sc}` (概率 `{pr}%`)")
+            
     st.divider()
     
-    # 异常坐标初步筛查
-    st.subheader("🛡️ 异常坐标初步筛查 (Anomalies Check)")
-    anomalies = 0
+    # ================= 模块三：偏离度预警 =================
+    st.subheader("🚨 模块三：机构意图与纸面实力偏离度预警")
     
-    prob_0g = 1 / g0
-    prob_00sc = 1 / s_00
-    if abs(prob_0g - prob_00sc) > 0.03:
-        st.warning("⚠️ 警告：总进球数0球 与 比分0:0 的赔率存在数学剪刀差，机构必有一边在诱导。")
-        anomalies += 1
+    # 检查赔率最看好的比分在泊松里热不热
+    top1_odds_score = sorted_odds[0][0]
+    odds_prob = sorted_odds[0][1]
+    
+    if top1_odds_score in poisson_scores:
+        pois_prob = poisson_scores[top1_odds_score]
+        diff = odds_prob - pois_prob
         
-    prob_big = (1/g3) + (1/g4) + (1/g5) + (1/g6) + (1/g7)
-    if prob_big > 0.6 and (s_10 < 7.0 or s_01 < 7.0):
-        st.warning("⚠️ 警告：总进球严重倾向3球及以上，但 1:0 或 0:1 小比分赔率被打压得很低，存在诱导小比分可能。")
-        anomalies += 1
+        st.write(f"机构最防范的比分是 `{top1_odds_score}`。")
+        st.write(f"机构给出的真实概率为 `{odds_prob}%`，而根据两队进球率算出的纯数学概率为 `{pois_prob}%`。")
         
-    if anomalies == 0:
-        st.info("✅ 暂未在核心录入赔率中发现明显逻辑冲突。")
+        if diff > 5.0:
+            st.error(f"⚠️ 强烈警报：机构对比分 `{top1_odds_score}` 的防范力度远超纸面数学概率（偏高 {round(diff,2)}%）！极大概率存在【机构未公开的利好】或【严重诱导】！")
+        elif diff < -5.0:
+            st.warning(f"⚠️ 异常提示：纸面数学非常支持比分 `{top1_odds_score}`，但机构赔率却显得无动于衷（偏低 {round(abs(diff),2)}%），小心大热倒灶。")
+        else:
+            st.info("👌 赔率概率与泊松概率基本吻合，属于正常实力盘。")
+    else:
+        st.warning(f"机构最防范的比分 `{top1_odds_score}` 超出了基础泊松（5球以内）的计算范围，属于极端大比分。")

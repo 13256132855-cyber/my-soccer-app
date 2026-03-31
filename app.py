@@ -5,7 +5,7 @@ import math
 st.set_page_config(page_title="竞彩全能操盘分析器", layout="wide")
 
 st.title("🛡️ 竞彩全玩法 + 泊松模型 终极操盘复合分析器")
-st.write("已集成：胜平负、让球、总进球、半全场及31项比分。全方位穿透机构意图。")
+st.write("已集成：胜平负、让球、总进球、半全场、31项比分及【交易盈亏资金面分析】。全方位穿透机构意图。")
 st.divider()
 
 # ================= 1. 泊松分布纯算法 =================
@@ -110,6 +110,30 @@ with st.expander("🏁 4. 竞彩比分赔率录入 (31项)", expanded=True):
     s_25 = sc31.number_input("2:5", 1.0, 1000.0, 150.0, 0.1)
     s_lose_other = sc32.number_input("负其他", 1.0, 1000.0, 50.0, 0.1)
 
+# 新增模块：5. 竞彩交易数据录入
+with st.expander("💹 5. 竞彩交易数据录入 (投注比 & 盈亏)", expanded=True):
+    st.write("【胜平负 交易数据】")
+    trade_col1, trade_col2, trade_col3 = st.columns(3)
+    win_bet_ratio = trade_col1.number_input("胜 投注比例 (%)", 0.0, 100.0, 60.0, 0.5)
+    win_profit = trade_col1.number_input("胜 庄家盈亏 (%)", -500.0, 500.0, 33.4, 0.1)
+    
+    draw_bet_ratio = trade_col2.number_input("平 投注比例 (%)", 0.0, 100.0, 17.0, 0.5)
+    draw_profit = trade_col2.number_input("平 庄家盈亏 (%)", -500.0, 500.0, -20.7, 0.1)
+    
+    lose_bet_ratio = trade_col3.number_input("负 投注比例 (%)", 0.0, 100.0, 23.0, 0.5)
+    lose_profit = trade_col3.number_input("负 庄家盈亏 (%)", -500.0, 500.0, -164.5, 0.1)
+    
+    st.write("【让球胜平负 交易数据】")
+    trade_col4, trade_col5, trade_col6 = st.columns(3)
+    rq_win_bet_ratio = trade_col4.number_input("让球胜 投注比 (%)", 0.0, 100.0, 53.0, 0.5)
+    rq_win_profit = trade_col4.number_input("让球胜 庄家盈亏 (%)", -500.0, 500.0, -9.18, 0.1)
+    
+    rq_draw_bet_ratio = trade_col5.number_input("让球平 投注比 (%)", 0.0, 100.0, 27.0, 0.5)
+    rq_draw_profit = trade_col5.number_input("让球平 庄家盈亏 (%)", -500.0, 500.0, -8.0, 0.1)
+    
+    rq_lose_bet_ratio = trade_col6.number_input("让球负 投注比 (%)", 0.0, 100.0, 20.0, 0.5)
+    rq_lose_profit = trade_col6.number_input("让球负 庄家盈亏 (%)", -500.0, 500.0, 49.2, 0.1)
+
 st.divider()
 
 # ================= 3. 核心计算逻辑 =================
@@ -184,3 +208,38 @@ if st.button("🚀 启动复合交叉分析", use_container_width=True):
         st.warning(f"⚠️ 异常提示：纸面数学非常支持比分 `{top1_odds_score}`，但机构赔率显得无动于衷，小心大热倒灶。")
     else:
         st.info("👌 赔率概率与泊松概率基本吻合，属于正常实力盘。")
+
+    st.divider()
+    st.subheader("💹 穿透机构意图：资金面与盈亏交叉分析")
+
+    # 构建字典方便逻辑循环
+    trade_data = {
+        "主胜": (win_bet_ratio, win_profit),
+        "平局": (draw_bet_ratio, draw_profit),
+        "客胜": (lose_bet_ratio, lose_profit),
+        "让球胜": (rq_win_bet_ratio, rq_win_profit),
+        "让球平": (rq_draw_bet_ratio, rq_draw_profit),
+        "让球负": (rq_lose_bet_ratio, rq_lose_profit),
+    }
+
+    intent_detected = False
+
+    # 逻辑一：识别大众狂热盲目点
+    for key, (ratio, profit) in trade_data.items():
+        if ratio > 50.0:
+            st.markdown(f"🚩 **资金极度聚集：** 大众有高达 **{ratio}%** 的资金盲目砸向了 **[{key}]** 选项。")
+            if profit < 0:
+                st.markdown(f"  ➔ ⚠️ *庄家盈亏为 `{profit}%`。庄家在此项面临赔付亏损，极有可能是诱盘，请务必小心反杀。*")
+            else:
+                st.markdown(f"  ➔ 🛡️ *庄家盈亏为 `{profit}%`（仍为正盈利）。说明赔率极低，哪怕大众极热，机构依然能全身而退，资金已无博弈价值。*")
+            intent_detected = True
+
+    # 逻辑二：识别庄家暴利冷门点 (根据你纠正的正确逻辑)
+    for key, (ratio, profit) in trade_data.items():
+        if profit > 40.0 and ratio < 30.0:
+            st.markdown(f"💰 **暗线发现 (机构暴利项)：** 如果打出 **[{key}]**，机构将获得高达 **{profit}%** 的暴利！")
+            st.markdown(f"  ➔ 💡 *该选项的投注比例仅为 `{ratio}%`，属于少有人问津的冷门，极其容易成为机构反向收割的落脚点。*")
+            intent_detected = True
+
+    if not intent_detected:
+        st.info("目前资金面比较均衡，未发现极热或极度暴利的异常收割项，属于正常博弈盘。")

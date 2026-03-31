@@ -3,9 +3,77 @@ import streamlit as st
 import numpy as np
 import math
 import pandas as pd  # 导入 Pandas 用于制作精美表格
+import matplotlib.pyplot as plt
 
 # 1. 页面基础配置
 st.set_page_config(page_title="竞彩全玩法分析器", layout="wide")
+# ================= 第一步：基本面六维雷达图 =================
+st.header("第一步：双队基本面战力雷达")
+st.write("📊 请根据两队近期表现（积分、近况、交锋、防守、进攻、控球）进行打分（1-10分）。")
+
+# 1. 创建两列用于输入两队的六维数据
+col_r1, col_r2 = st.columns(2)
+
+with col_r1:
+    st.markdown("**🏠 主队能力值**")
+    h_points = st.slider("主队积分/排名实力", 1.0, 10.0, 7.0, 0.5)
+    h_form = st.slider("主队近期胜率/状态", 1.0, 10.0, 6.5, 0.5)
+    h_h2h = st.slider("主队历史交锋心理", 1.0, 10.0, 5.0, 0.5)
+    h_def = st.slider("主队防守零封能力", 1.0, 10.0, 8.0, 0.5)
+    h_att = st.slider("主队进攻爆破能力", 1.0, 10.0, 6.0, 0.5)
+    h_poss = st.slider("主队控球场面传控", 1.0, 10.0, 7.5, 0.5)
+
+with col_r2:
+    st.markdown("**🤖 客队能力值**")
+    a_points = st.slider("客队积分/排名实力", 1.0, 10.0, 8.0, 0.5)
+    a_form = st.slider("客队近期胜率/状态", 1.0, 10.0, 7.5, 0.5)
+    a_h2h = st.slider("客队历史交锋心理", 1.0, 10.0, 5.0, 0.5)
+    a_def = st.slider("客队防守零封能力", 1.0, 10.0, 6.0, 0.5)
+    a_att = st.slider("客队进攻爆破能力", 1.0, 10.0, 8.5, 0.5)
+    a_poss = st.slider("客队控球场面传控", 1.0, 10.0, 6.5, 0.5)
+
+# 2. Matplotlib 雷达图绘制逻辑
+categories = ['积分实力', '近期胜率', '交锋心理', '防守能力', '进攻能力', '控球传控']
+N = len(categories)
+
+# 旋转角度
+angles = [n / float(N) * 2 * math.pi for n in range(N)]
+angles += angles[:1] # 闭合图形
+
+# 组装数据
+home_values = [h_points, h_form, h_h2h, h_def, h_att, h_poss]
+home_values += home_values[:1]
+
+away_values = [a_points, a_form, a_h2h, a_def, a_att, a_poss]
+away_values += away_values[:1]
+
+# 开始画图
+fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+
+# 解决中文显示问题
+plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans'] # 优先中文字体
+plt.rcParams['axes.unicode_minus'] = False 
+
+# 画主队
+ax.plot(angles, home_values, linewidth=2, linestyle='solid', label='主队', color='#FF4B4B')
+ax.fill(angles, home_values, '#FF4B4B', alpha=0.25)
+
+# 画客队
+ax.plot(angles, away_values, linewidth=2, linestyle='solid', label='客队', color='#0068C9')
+ax.fill(angles, away_values, '#0068C9', alpha=0.25)
+
+# 添加刻度和标签
+plt.xticks(angles[:-1], categories, size=10)
+ax.set_rlabel_position(0)
+plt.yticks([2, 4, 6, 8, 10], ["2", "4", "6", "8", "10"], color="grey", size=8)
+plt.ylim(0, 10)
+
+plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+
+# 在Streamlit中显示图片
+st.pyplot(fig)
+st.divider()
+
 
 st.title("🛡️ 竞彩全玩法 + 泊松模型 终极操盘复合分析器")
 st.write("完全按照竞彩官方排版顺序整合：含所有玩法、盈亏数据、泊松分布完整31项比分精算（含热力图大表）。")

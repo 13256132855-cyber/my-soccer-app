@@ -71,51 +71,51 @@ st.subheader("【5. 比分 赔率（含胜/平/负其他）】")
 
 st.markdown("**◆ 主胜比分系列**")
 s_cols1 = st.columns(5)
-sc_w_other = s_cols1[0].number_input("胜其他", 1.0, 1000.0, 7.60, 0.1)
-sc_10 = s_cols1[1].number_input("1:0", 1.0, 1000.0, 10.50, 0.1)
-sc_20 = s_cols1[2].number_input("2:0", 1.0, 1000.0, 7.75, 0.05)
-sc_21 = s_cols1[3].number_input("2:1", 1.0, 1000.0, 9.50, 0.1)
-sc_30 = s_cols1[4].number_input("3:0", 1.0, 1000.0, 6.75, 0.05)
+sc_w_other = s_cols1[0].number_input("胜其他", 1.0, 1000.0, 35.0, 0.1)
+sc_10 = s_cols1[1].number_input("1:0", 1.0, 1000.0, 7.75, 0.05)
+sc_20 = s_cols1[2].number_input("2:0", 1.0, 1000.0, 8.75, 0.05)
+sc_21 = s_cols1[3].number_input("2:1", 1.0, 1000.0, 7.00, 0.05)
+sc_30 = s_cols1[4].number_input("3:0", 1.0, 1000.0, 14.00, 0.1)
 
 s_cols2 = st.columns(5)
-sc_31 = s_cols2[0].number_input("3:1", 1.0, 1000.0, 9.00, 0.1)
-sc_32 = s_cols2[1].number_input("3:2", 1.0, 1000.0, 26.00, 0.1)
-sc_40 = s_cols2[2].number_input("4:0", 1.0, 1000.0, 9.00, 0.1)
-sc_41 = s_cols2[3].number_input("4:1", 1.0, 1000.0, 12.50, 0.1)
-sc_42 = s_cols2[4].number_input("4:2", 1.0, 1000.0, 27.00, 0.1)
+sc_31 = s_cols2[0].number_input("3:1", 1.0, 1000.0, 12.00, 0.1)
+sc_32 = s_cols2[1].number_input("3:2", 1.0, 1000.0, 18.00, 0.1)
+sc_40 = s_cols2[2].number_input("4:0", 1.0, 1000.0, 28.00, 0.1)
+sc_41 = s_cols2[3].number_input("4:1", 1.0, 1000.0, 24.00, 0.1)
+sc_42 = s_cols2[4].number_input("4:2", 1.0, 1000.0, 40.00, 0.1)
 
 s_cols3 = st.columns(3)
-sc_50 = s_cols3[0].number_input("5:0", 1.0, 1000.0, 13.00, 0.1)
-sc_51 = s_cols3[1].number_input("5:1", 1.0, 1000.0, 19.00, 0.1)
-sc_52 = s_cols3[2].number_input("5:2", 1.0, 1000.0, 45.00, 0.1)
+sc_50 = s_cols3[0].number_input("5:0", 1.0, 1000.0, 65.00, 0.1)
+sc_51 = s_cols3[1].number_input("5:1", 1.0, 1000.0, 50.00, 0.1)
+sc_52 = s_cols3[2].number_input("5:2", 1.0, 1000.0, 90.00, 0.1)
 
 st.markdown("**◆ 平局比分系列**")
 p_cols = st.columns(5)
-sc_p_other = p_cols[0].number_input("平其他", 1.0, 1000.0, 175.0, 1.0)
-sc_00 = p_cols[1].number_input("0:0", 1.0, 1000.0, 33.00, 0.1)
-sc_11 = p_cols[2].number_input("1:1", 1.0, 1000.0, 15.00, 0.1)
-sc_22 = p_cols[3].number_input("2:2", 1.0, 1000.0, 23.00, 0.1)
-sc_33 = p_cols[4].number_input("3:3", 1.0, 1000.0, 60.00, 0.1)
+sc_p_other = p_cols[0].number_input("平其他", 1.0, 1000.0, 250.0, 1.0)
+sc_00 = p_cols[1].number_input("0:0", 1.0, 1000.0, 15.00, 0.1)
+sc_11 = p_cols[2].number_input("1:1", 1.0, 1000.0, 7.75, 0.05)
+sc_22 = p_cols[3].number_input("2:2", 1.0, 1000.0, 12.50, 0.1)
+sc_33 = p_cols[4].number_input("3:3", 1.0, 1000.0, 50.00, 0.1)
 
 st.markdown("**◆ 客胜比分系列**")
 f_cols1 = st.columns(5)
-sc_f_other = f_cols1[0].number_input("负其他", 1.0, 1000.0, 175.0, 1.0)
-sc_01 = f_cols1[1].number_input("0:1", 1.0, 1000.0, 45.00, 0.1)
-sc_02 = f_cols1[2].number_input("0:2", 1.0, 1000.0, 90.00, 0.1)
-sc_12 = f_cols1[3].number_input("1:2", 1.0, 1000.0, 45.00, 0.1)
-sc_03 = f_cols1[4].number_input("0:3", 1.0, 1000.0, 200.0, 1.0)
+sc_f_other = f_cols1[0].number_input("负其他", 1.0, 1000.0, 100.0, 1.0)
+sc_01 = f_cols1[1].number_input("0:1", 1.0, 1000.0, 13.00, 0.1)
+sc_02 = f_cols1[2].number_input("0:2", 1.0, 1000.0, 22.00, 0.1)
+sc_12 = f_cols1[3].number_input("1:2", 1.0, 1000.0, 12.00, 0.1)
+sc_03 = f_cols1[4].number_input("0:3", 1.0, 1000.0, 60.0, 0.1)
 
 f_cols2 = st.columns(5)
-sc_13 = f_cols2[0].number_input("1:3", 1.0, 1000.0, 90.00, 0.1)
-sc_23 = f_cols2[1].number_input("2:3", 1.0, 1000.0, 80.00, 0.1)
-sc_04 = f_cols2[2].number_input("0:4", 1.0, 1000.0, 450.0, 1.0)
-sc_14 = f_cols2[3].number_input("1:4", 1.0, 1000.0, 250.0, 1.0)
-sc_24 = f_cols2[4].number_input("2:4", 1.0, 1000.0, 175.0, 1.0)
+sc_13 = f_cols2[0].number_input("1:3", 1.0, 1000.0, 30.00, 0.1)
+sc_23 = f_cols2[1].number_input("2:3", 1.0, 1000.0, 31.00, 0.1)
+sc_04 = f_cols2[2].number_input("0:4", 1.0, 1000.0, 150.0, 1.0)
+sc_14 = f_cols2[3].number_input("1:4", 1.0, 1000.0, 80.0, 1.0)
+sc_24 = f_cols2[4].number_input("2:4", 1.0, 1000.0, 100.0, 1.0)
 
 f_cols3 = st.columns(3)
-sc_05 = f_cols3[0].number_input("0:5", 1.0, 1000.0, 750.0, 1.0)
-sc_15 = f_cols3[1].number_input("1:5", 1.0, 1000.0, 500.0, 1.0)
-sc_25 = f_cols3[2].number_input("2:5", 1.0, 1000.0, 450.0, 1.0)
+sc_05 = f_cols3[0].number_input("0:5", 1.0, 1000.0, 500.0, 1.0)
+sc_15 = f_cols3[1].number_input("1:5", 1.0, 1000.0, 300.0, 1.0)
+sc_25 = f_cols3[2].number_input("2:5", 1.0, 1000.0, 300.0, 1.0)
 
 st.divider()
 
@@ -185,7 +185,7 @@ if st.button("🚀 启动复合交叉分析"):
             if (i + j) < 2.5: prob_under_25 += matrix[i][j]
     prob_over_25 = 1.0 - prob_under_25
 
-    # 1. 定义31项比分的映射关系并计算概率
+    # 1. 计算比分概率
     s_scores_raw = {
         "1:0": matrix[1][0], "2:0": matrix[2][0], "2:1": matrix[2][1],
         "3:0": matrix[3][0], "3:1": matrix[3][1], "3:2": matrix[3][2],
@@ -222,63 +222,58 @@ if st.button("🚀 启动复合交叉分析"):
 
     st.divider()
 
-    # 🏆 3. 核心功能实现：制作 31 项比分热力表格（字变小，概率在下，高亮高概率）
-    st.markdown("### 🏆 竞彩官方 31 项比分全维度概率精算（颜色高亮热力图）")
+    # 🏆 3. 核心功能实现：制作 31 项比分表格（概率在下，字体变小）
+    st.markdown("### 🏆 竞彩官方 31 项比分全维度概率精算（高亮高概率）")
     
+    # 辅助函数：根据概率大小生成背景色的CSS
+    def get_color(prob, max_prob, base_color):
+        if max_prob == 0:
+            return ""
+        # 按照当前格子的概率占最高概率的比例，分配透明度(0.1 ~ 0.8)
+        alpha = 0.1 + 0.7 * (prob / max_prob)
+        if base_color == "red":
+            return f"background-color: rgba(255, 0, 0, {alpha});"
+        elif base_color == "green":
+            return f"background-color: rgba(0, 128, 0, {alpha});"
+        elif base_color == "blue":
+            return f"background-color: rgba(0, 0, 255, {alpha});"
+        return ""
+
     # 🔴 【胜】区表格
     st.markdown("<font color='red' size='4'>**🔴 【胜】区比分概率（共13项）**</font>", unsafe_allow_html=True)
-    # 整合数据为 DataFrame
-    s_data = {
-        "比分": ["胜其他", "1:0", "2:0", "2:1", "3:0", "3:1", "3:2", "4:0", "4:1", "4:2", "5:0", "5:1", "5:2"],
-        "概率": [s_other, s_scores_raw["1:0"], s_scores_raw["2:0"], s_scores_raw["2:1"], s_scores_raw["3:0"], s_scores_raw["3:1"], s_scores_raw["3:2"], s_scores_raw["4:0"], s_scores_raw["4:1"], s_scores_raw["4:2"], s_scores_raw["5:0"], s_scores_raw["5:1"], s_scores_raw["5:2"]]
-    }
-    df_s = pd.DataFrame(s_data)
-    # 转置表格，让比分在首行，概率在下
-    df_s_T = df_s.set_index("比分").T
+    s_labels = ["胜其他", "1:0", "2:0", "2:1", "3:0", "3:1", "3:2", "4:0", "4:1", "4:2", "5:0", "5:1", "5:2"]
+    s_vals = [s_other, s_scores_raw["1:0"], s_scores_raw["2:0"], s_scores_raw["2:1"], s_scores_raw["3:0"], s_scores_raw["3:1"], s_scores_raw["3:2"], s_scores_raw["4:0"], s_scores_raw["4:1"], s_scores_raw["4:2"], s_scores_raw["5:0"], s_scores_raw["5:1"], s_scores_raw["5:2"]]
     
+    max_s = max(s_vals) if s_vals else 1.0
+    s_html = "<div style='overflow-x:auto;'><table style='width:100%; text-align:center; border-collapse:collapse; font-size:12px; border:1px solid #ddd;'>"
+    s_html += "<tr>" + "".join([f"<th style='border:1px solid #ddd; padding:4px; background-color:#f9f9f9;'>{lbl}</th>" for lbl in s_labels]) + "</tr>"
+    s_html += "<tr>" + "".join([f"<td style='border:1px solid #ddd; padding:4px; {get_color(v, max_s, 'red')}'>{v*100:.2f}%</td>" for v in s_vals]) + "</tr>"
+    s_html += "</table></div>"
+    st.markdown(s_html, unsafe_allow_html=True)
+
     # 🟢 【平】区表格
-    st.markdown("<font color='green' size='4'>**🟢 【平】区比分概率（共5项）**</font>", unsafe_allow_html=True)
-    p_data = {
-        "比分": ["平其他", "0:0", "1:1", "2:2", "3:3"],
-        "概率": [p_other, p_scores_raw["0:0"], p_scores_raw["1:1"], p_scores_raw["2:2"], p_scores_raw["3:3"]]
-    }
-    df_p = pd.DataFrame(p_data)
-    df_p_T = df_p.set_index("比分").T
+    st.markdown("<br><font color='green' size='4'>**🟢 【平】区比分概率（共5项）**</font>", unsafe_allow_html=True)
+    p_labels = ["平其他", "0:0", "1:1", "2:2", "3:3"]
+    p_vals = [p_other, p_scores_raw["0:0"], p_scores_raw["1:1"], p_scores_raw["2:2"], p_scores_raw["3:3"]]
+    
+    max_p = max(p_vals) if p_vals else 1.0
+    p_html = "<div style='overflow-x:auto;'><table style='width:100%; text-align:center; border-collapse:collapse; font-size:12px; border:1px solid #ddd;'>"
+    p_html += "<tr>" + "".join([f"<th style='border:1px solid #ddd; padding:4px; background-color:#f9f9f9;'>{lbl}</th>" for lbl in p_labels]) + "</tr>"
+    p_html += "<tr>" + "".join([f"<td style='border:1px solid #ddd; padding:4px; {get_color(v, max_p, 'green')}'>{v*100:.2f}%</td>" for v in p_vals]) + "</tr>"
+    p_html += "</table></div>"
+    st.markdown(p_html, unsafe_allow_html=True)
 
     # 🔵 【负】区表格
-    st.markdown("<font color='blue' size='4'>**🔵 【负】区比分概率（共13项）**</font>", unsafe_allow_html=True)
-    f_data = {
-        "比分": ["负其他", "0:1", "0:2", "1:2", "0:3", "1:3", "2:3", "0:4", "1:4", "2:4", "0:5", "1:5", "2:5"],
-        "概率": [f_other, f_scores_raw["0:1"], f_scores_raw["0:2"], f_scores_raw["1:2"], f_scores_raw["0:3"], f_scores_raw["1:3"], f_scores_raw["2:3"], f_scores_raw["0:4"], f_scores_raw["1:4"], f_scores_raw["2:4"], f_scores_raw["0:5"], f_scores_raw["1:5"], f_scores_raw["2:5"]]
-    }
-    df_f = pd.DataFrame(f_data)
-    df_f_T = df_f.set_index("比分").T
-
-    # 定义一个内部函数，用于生成和渲染表格（含颜色和字体优化）
-    def render_hot_table(df_T, color_cmap):
-        # 1. 格式化：转为百分比
-        formatted_df = df_T.applymap(lambda x: f"{x*100:.2f}%")
-        
-        # 2. 颜色风格：使用 Pandas Styler 生成颜色
-        styled_df = formatted_df.style.background_gradient(
-            axis=1,            # 按行应用颜色
-            vmin=0.0,          # 颜色刻度起点为 0
-            vmax=df_T.values.max(), # 颜色刻度终点为当前表格最大概率
-            cmap=color_cmap,   # 颜色风格（胜区用Reds，平区用Greens，负区用Blues）
-            gmap=df_T.values   # **关键：颜色深浅依据原始概率值计算，而非格式化后的字符串**
-        ).set_properties(**{
-            'font-size': '12px',    # **字体变小 (默认是14px或16px)**
-            'text-align': 'center' # 居中对齐
-        })
-        
-        # 3. 在 Streamlit 中显示
-        st.dataframe(styled_df, use_container_width=True)
-
-    # 渲染三个区的表格
-    # 使用 st.cache_data 来避免重复渲染以提高速度
-    render_hot_table(df_s_T, 'Reds')   # 胜区用红色热力图
-    render_hot_table(df_p_T, 'Greens') # 平区用绿色热力图
-    render_hot_table(df_f_T, 'Blues')  # 负区用蓝色热力图
+    st.markdown("<br><font color='blue' size='4'>**🔵 【负】区比分概率（共13项）**</font>", unsafe_allow_html=True)
+    f_labels = ["负其他", "0:1", "0:2", "1:2", "0:3", "1:3", "2:3", "0:4", "1:4", "2:4", "0:5", "1:5", "2:5"]
+    f_vals = [f_other, f_scores_raw["0:1"], f_scores_raw["0:2"], f_scores_raw["1:2"], f_scores_raw["0:3"], f_scores_raw["1:3"], f_scores_raw["2:3"], f_scores_raw["0:4"], f_scores_raw["1:4"], f_scores_raw["2:4"], f_scores_raw["0:5"], f_scores_raw["1:5"], f_scores_raw["2:5"]]
+    
+    max_f = max(f_vals) if f_vals else 1.0
+    f_html = "<div style='overflow-x:auto;'><table style='width:100%; text-align:center; border-collapse:collapse; font-size:12px; border:1px solid #ddd;'>"
+    f_html += "<tr>" + "".join([f"<th style='border:1px solid #ddd; padding:4px; background-color:#f9f9f9;'>{lbl}</th>" for lbl in f_labels]) + "</tr>"
+    f_html += "<tr>" + "".join([f"<td style='border:1px solid #ddd; padding:4px; {get_color(v, max_f, 'blue')}'>{v*100:.2f}%</td>" for v in f_vals]) + "</tr>"
+    f_html += "</table></div>"
+    st.markdown(f_html, unsafe_allow_html=True)
 
     st.divider()
 

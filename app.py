@@ -277,3 +277,87 @@ if st.button("🚀 启动复合交叉分析"):
 
     st.divider()
 
+    # ================= 第四步：机构级期望值（Value Bet）挖掘模块 =================
+    st.divider()
+    st.header("第四步：博弈期望值（Value Bet）深度挖掘")
+    st.write("💡 庄家视角：寻找【真实概率 × 官方赔率 > 1】的数学漏洞。")
+
+    # 1. 计算胜平负的机构抽水与隐含概率
+    # 隐含概率 = 1 / 赔率
+    implied_win = 1 / win_odd
+    implied_draw = 1 / draw_odd
+    implied_lose = 1 / lose_odd
+    total_implied = implied_win + implied_draw + implied_lose
+    
+    # 算出官方在这场比赛胜平负玩法的抽水（返还率 = 1 / total_implied）
+    return_rate = (1 / total_implied) * 100
+    
+    col_v1, col_v2 = st.columns(2)
+    with col_v1:
+        st.markdown("**【市场隐含概率 vs 你的泊松概率】**")
+        st.write(f"* 官方测定主胜概率: `{implied_win/total_implied*100:.2f}%` (你算出: `{prob_win*100:.2f}%`)")
+        st.write(f"* 官方测定平局概率: `{implied_draw/total_implied*100:.2f}%` (你算出: `{prob_draw*100:.2f}%`)")
+        st.write(f"* 官方测定客胜概率: `{implied_lose/total_implied*100:.2f}%` (你算出: `{prob_lose*100:.2f}%`)")
+    with col_v2:
+        st.markdown("**【机构风控指标】**")
+        st.write(f"* 本场官方原始抽水（Overround）: `{(total_implied - 1)*100:.2f}%`")
+        st.write(f"* 理论返还率（Payout）: `{return_rate:.2f}%`")
+
+    # 2. 计算期望值 (Value = 泊松概率 * 官方赔率)
+    ev_win = prob_win * win_odd
+    ev_draw = prob_draw * draw_odd
+    ev_lose = prob_lose * lose_odd
+
+    st.markdown("### 🎯 胜平负玩法期望值（EV）")
+    st.write("注：EV > 1.00 说明该选项赔率被机构低估，具备长期投注的“正期望值”价值。")
+    
+    # 制作胜平负期望值表格
+    ev_data = {
+        "玩法选项": ["主胜 (3)", "平局 (1)", "客胜 (0)"],
+        "官方赔率": [win_odd, draw_odd, lose_odd],
+        "你的理论概率": [f"{prob_win*100:.2f}%", f"{prob_draw*100:.2f}%", f"{prob_lose*100:.2f}%"],
+        "期望值 (EV)": [round(ev_win, 3), round(ev_draw, 3), round(ev_lose, 3)]
+    }
+    ev_df = pd.DataFrame(ev_data)
+    
+    # 用颜色高亮EV > 1.0 的行
+    def highlight_ev(row):
+        return ['background-color: rgba(0, 128, 0, 0.2)' if row['期望值 (EV)'] > 1.0 else '' for _ in row]
+    
+    st.dataframe(ev_df.style.apply(highlight_ev, axis=1), use_container_width=True)
+
+    # 3. 进阶：比分玩法的极限捡漏（找出Top 3高价值比分）
+    st.markdown("### 💎 31项比分高价值捡漏雷达")
+    
+    all_scores = []
+    # 整合胜区
+    for lbl, prob in zip(s_labels, s_vals):
+        all_scores.append({"比分": lbl, "概率": prob, "赔率": globals().get(f"sc_{lbl.replace(':', '')}") if lbl != "胜其他" else sc_w_other})
+    # 整合平区
+    for lbl, prob in zip(p_labels, p_vals):
+        all_scores.append({"比分": lbl, "概率": prob, "赔率": globals().get(f"sc_{lbl.replace(':', '')}") if lbl != "平其他" else sc_p_other})
+    # 整合负区
+    for lbl, prob in zip(f_labels, f_vals):
+        all_scores.append({"比分": lbl, "概率": prob, "赔率": globals().get(f"sc_{lbl.replace(':', '')}") if lbl != "负其他" else sc_f_other})
+        
+    # 计算每个比分的EV
+    for item in all_scores:
+        if item["赔率"] is not None:
+            item["期望值 (EV)"] = round(item["概率"] * item["赔率"], 3)
+        else:
+            item["期望值 (EV)"] = 0.0
+
+    # 排序，找出EV最高的比分
+    sorted_scores = sorted(all_scores, key=lambda x: x["期望值 (EV)"], reverse=True)
+    
+    top_n = 3
+    st.write(f"根据您的泊松输入，本场 EV 最高的 **前 {top_n} 个** 捡漏比分如下：")
+    
+    for i in range(min(top_n, len(sorted_scores))):
+        best = sorted_scores[i]
+        if best["期望值 (EV)"] > 1.0:
+            st.success(f"🔥 排名第 {i+1}：比分 **{best['比分']}** | 概率: `{best['概率']*100:.2f}%` | 赔率: `{best['赔率']}` | **EV: {best['期望值 (EV)']}** (极具博取价值！)")
+        else:
+            st.warning(f"ℹ️ 排名第 {i+1}：比分 **{best['比分']}** | 概率: `{best['概率']*100:.2f}%` | 赔率: `{best['赔率']}` | **EV: {best['期望值 (EV)']}** (暂未发现绝对数学漏洞)")
+
+

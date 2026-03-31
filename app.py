@@ -1,4 +1,3 @@
-
 import streamlit as st
 import numpy as np
 import math
@@ -427,5 +426,58 @@ if st.button("🚀 启动复合交叉分析"):
             st.success(f"🔥 排名第 {i+1}：比分 **{best['比分']}** | 概率: `{best['概率']*100:.2f}%` | 赔率: `{best['赔率']}` | **EV: {best['期望值 (EV)']}** (极具博取价值！)")
         else:
             st.warning(f"ℹ️ 排名第 {i+1}：比分 **{best['比分']}** | 概率: `{best['概率']*100:.2f}%` | 赔率: `{best['赔率']}` | **EV: {best['期望值 (EV)']}** (暂未发现绝对数学漏洞)")
+# ================= 第五步：凯利准则智能仓位控制 =================
+st.divider()
+st.header("第五步：凯利准则（Kelly）智能仓位管理")
+st.write("💰 模型将根据上面扫出的“正期望值”比分，自动计算出最科学的资金分配比例。")
+
+# 1. 设定总本金
+total_bankroll = st.number_input("请输入你的操盘总本金（元）：", min_value=100, value=10000, step=100)
+risk_factor = st.slider("操盘风险系数（建议使用 0.25 即四分之一凯利，更稳健）", 0.05, 1.0, 0.25, 0.05)
+
+st.markdown("### 🎯 推荐投注仓位（仅展示 EV > 1.0 且仓位 > 0 的捡漏选项）")
+
+kelly_results = []
+
+# 直接复用你代码里的 all_scores 变量
+for item in all_scores:
+    prob = item.get("概率", 0)
+    odds = item.get("赔率", 0)
+    label = item.get("比分", "未知")
+    
+    if odds and odds > 1: # 赔率必须大于1才有意义
+        # 计算凯利百分比
+        p = prob / 100.0  # 转为小数概率
+        b = odds - 1.0
+        q = 1.0 - p
+        
+        kelly_percent = (p * b - q) / b if b > 0 else 0
+        
+        # 计算 EV
+        ev = p * odds
+        
+        # 只有当 EV > 1 且凯利算出来的仓位大于 0 时才推荐
+        if ev > 1.00 and kelly_percent > 0:
+            adjusted_kelly = kelly_percent * risk_factor  # 乘以风险系数（分注）
+            bet_money = total_bankroll * adjusted_kelly
+            
+            kelly_results.append({
+                "比分": label,
+                "期望值(EV)": round(ev, 3),
+                "理论概率": f"{prob}%",
+                "官方赔率": odds,
+                "建议仓位": f"{round(adjusted_kelly * 100, 2)}%",
+                "建议投注金额": f"{round(bet_money, 2)} 元"
+            })
+
+# 3. 输出表格
+if kelly_results:
+    import pandas as pd
+    # 按照期望值从大到小排序
+    df_kelly = pd.DataFrame(kelly_results)
+    st.dataframe(df_kelly.sort_values(by="期望值(EV)", ascending=False), use_container_width=True)
+    st.success("💡 策略提示：凯利公式是基于大数定律的数学最优解，切勿重仓梭哈，严格按照分注（如1/4凯利）执行方能复利增长！")
+else:
+    st.warning("🔍 当前输入的数据中，没有发现具备“正期望值”且符合凯利法则的捡漏比分。")
 
 

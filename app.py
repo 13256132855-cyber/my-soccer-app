@@ -20,18 +20,22 @@ away_exp = st.sidebar.slider("客队预期进球数", 0.1, 5.0, 1.2, 0.05)
 
 # ================= 2. 基础赔率录入 =================
 with st.write("【让球胜平负】")
-    # 🌟 新增：让用户自己输入本场比赛的让球数
-    handicap_val = col4.number_input("请输入具体让球数 (如让1球填-1, 受让1球填+1)", -10, 10, -1, 1)
     
-    # 动态生成标签文字，让界面更智能
-    h_win_label = f"让球({handicap_val})-胜" if handicap_val < 0 else f"受让({handicap_val})-胜"
-    h_draw_label = f"让球({handicap_val})-平" if handicap_val < 0 else f"受让({handicap_val})-平"
-    h_lose_label = f"让球({handicap_val})-负" if handicap_val < 0 else f"受让({handicap_val})-负"
+    # 🌟 核心修改 1：新增一个可以自由调节让球数的输入框
+    # 默认值设为 -1，步长为 1，范围从 -10 到 +10
+    handicap_val = col1.number_input("设置让球数 (如让2球填 -2, 受让1球填 1)", -10, 10, -1, 1)
     
-    # 将原本写死的 label 替换成动态 label
-    rq_s = col4.number_input(h_win_label, 1.0, 1000.0, 1.82, 0.01)
-    rq_p = col5.number_input(h_draw_label, 1.0, 1000.0, 3.40, 0.01)
-    rq_f = col6.number_input(h_lose_label, 1.0, 1000.0, 3.50, 0.01)
+    # 🌟 核心修改 2：根据你填的数字，智能生成动态标签，这样界面就不会乱
+    if handicap_val < 0:
+        h_label = f"让球({handicap_val})"
+    else:
+        h_label = f"受让({handicap_val})"
+        
+    col4, col5, col6 = st.columns(3)
+    # 将原本写死的 label 替换成动态生成的 h_label
+    rq_s = col4.number_input(f"{h_label}-胜", 1.0, 1000.0, 1.82, 0.01)
+    rq_p = col5.number_input(f"{h_label}-平", 1.0, 1000.0, 3.40, 0.01)
+    rq_f = col6.number_input(f"{h_label}-负", 1.0, 1000.0, 3.50, 0.01)
 
 with st.expander("⚽ 2. 总进球数 赔率录入", expanded=True):
     tc1, tc2, tc3, tc4 = st.columns(4)

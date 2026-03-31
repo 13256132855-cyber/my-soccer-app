@@ -370,7 +370,7 @@ st.markdown("### 🎯 推荐投注仓位（仅展示 EV > 1.0 且仓位 > 0 的�
 kelly_results = []
 
 # 直接复用你代码里的 all_scores 变量
-for item in all_scores:
+for item in sorted_scores:
     prob = item.get("概率", 0)
     odds = item.get("赔率", 0)
     label = item.get("比分", "未知")

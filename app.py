@@ -2,12 +2,13 @@
 import streamlit as st
 import numpy as np
 import math
+import pandas as pd  # 导入 Pandas 用于制作精美表格
 
 # 1. 页面基础配置
 st.set_page_config(page_title="竞彩全玩法分析器", layout="wide")
 
 st.title("🛡️ 竞彩全玩法 + 泊松模型 终极操盘复合分析器")
-st.write("完全按照竞彩官方排版顺序整合：含所有玩法、盈亏数据、泊松分布完整31项比分精算。")
+st.write("完全按照竞彩官方排版顺序整合：含所有玩法、盈亏数据、泊松分布完整31项比分精算（含热力图大表）。")
 
 st.divider()
 
@@ -167,62 +168,47 @@ if st.button("🚀 启动复合交叉分析"):
         for j in range(7):
             matrix[i][j] = poisson_prob(home_lambda, i) * poisson_prob(away_lambda, j)
             
-    # 计算大项总概率
+    # 计算胜平负总概率
     prob_win = 0.0   # 主胜总概率
     prob_draw = 0.0  # 平局总概率
     prob_lose = 0.0  # 客胜总概率
-    
     for i in range(7):
         for j in range(7):
-            if i > j:
-                prob_win += matrix[i][j]
-            elif i == j:
-                prob_draw += matrix[i][j]
-            else:
-                prob_lose += matrix[i][j]
+            if i > j: prob_win += matrix[i][j]
+            elif i == j: prob_draw += matrix[i][j]
+            else: prob_lose += matrix[i][j]
                 
-    # 计算总进球数(大小球)概率
-    prob_under_25 = 0.0  # 小于2.5球
+    # 计算大小球2.5概率
+    prob_under_25 = 0.0
     for i in range(7):
         for j in range(7):
-            if (i + j) < 2.5:
-                prob_under_25 += matrix[i][j]
-    prob_over_25 = 1.0 - prob_under_25  # 大于2.5球
+            if (i + j) < 2.5: prob_under_25 += matrix[i][j]
+    prob_over_25 = 1.0 - prob_under_25
 
-    # 定义31项比分的映射关系
-    # 主胜比分系列
-    s_scores = {
+    # 1. 定义31项比分的映射关系并计算概率
+    s_scores_raw = {
         "1:0": matrix[1][0], "2:0": matrix[2][0], "2:1": matrix[2][1],
         "3:0": matrix[3][0], "3:1": matrix[3][1], "3:2": matrix[3][2],
         "4:0": matrix[4][0], "4:1": matrix[4][1], "4:2": matrix[4][2],
         "5:0": matrix[5][0], "5:1": matrix[5][1], "5:2": matrix[5][2]
     }
-    # 计算【胜其他】
-    s_sum_known = sum(s_scores.values())
-    s_other = prob_win - s_sum_known
+    s_other = max(prob_win - sum(s_scores_raw.values()), 0.0)
     
-    # 平局比分系列
-    p_scores = {
+    p_scores_raw = {
         "0:0": matrix[0][0], "1:1": matrix[1][1], "2:2": matrix[2][2], "3:3": matrix[3][3]
     }
-    # 计算【平其他】
-    p_sum_known = sum(p_scores.values())
-    p_other = prob_draw - p_sum_known
+    p_other = max(prob_draw - sum(p_scores_raw.values()), 0.0)
 
-    # 客胜比分系列
-    f_scores = {
+    f_scores_raw = {
         "0:1": matrix[0][1], "0:2": matrix[0][2], "1:2": matrix[1][2],
         "0:3": matrix[0][3], "1:3": matrix[1][3], "2:3": matrix[2][3],
         "0:4": matrix[0][4], "1:4": matrix[1][4], "2:4": matrix[2][4],
         "0:5": matrix[0][5], "1:5": matrix[1][5], "2:5": matrix[2][5]
     }
-    # 计算【负其他】
-    f_sum_known = sum(f_scores.values())
-    f_other = prob_lose - f_sum_known
+    f_other = max(prob_lose - sum(f_scores_raw.values()), 0.0)
 
-    # 1. 输出宏观概率
+    # 2. 输出宏观概率
     st.markdown("### 📊 泊松模型预测结果全景图")
-    
     col_res1, col_res2 = st.columns(2)
     with col_res1:
         st.markdown("**【胜平负大势概率】**")
@@ -231,64 +217,68 @@ if st.button("🚀 启动复合交叉分析"):
         st.write(f"* 客胜总概率: `{prob_lose*100:.2f}%`")
     with col_res2:
         st.markdown("**【大小球2.5概率】**")
-        st.write(f"* 小球（全场总进球 < 2.5）: `{prob_under_25*100:.2f}%`")
-        st.write(f"* 大球（全场总进球 > 2.5）: `{prob_over_25*100:.2f}%`")
+        st.write(f"* 小球（< 2.5球）: `{prob_under_25*100:.2f}%`")
+        st.write(f"* 大球（> 2.5球）: `{prob_over_25*100:.2f}%`")
 
     st.divider()
 
-    # 2. 输出31项比分明细（完全参照竞彩官方版面排布）
-    st.markdown("### 🏆 竞彩官方 31 项比分全维度概率精算")
+    # 🏆 3. 核心功能实现：制作 31 项比分热力表格（字变小，概率在下，高亮高概率）
+    st.markdown("### 🏆 竞彩官方 31 项比分全维度概率精算（颜色高亮热力图）")
     
-    # 🔴 主胜
-    st.markdown("<font color='red'>**🔴 【胜】区比分概率（共13项）**</font>", unsafe_allow_html=True)
-    sc1, sc2, sc3, sc4, sc5 = st.columns(5)
-    sc1.metric("胜其他", f"{max(s_other*100, 0.0):.2f}%")
-    sc2.metric("1:0", f"{s_scores['1:0']*100:.2f}%")
-    sc3.metric("2:0", f"{s_scores['2:0']*100:.2f}%")
-    sc4.metric("2:1", f"{s_scores['2:1']*100:.2f}%")
-    sc5.metric("3:0", f"{s_scores['3:0']*100:.2f}%")
+    # 🔴 【胜】区表格
+    st.markdown("<font color='red' size='4'>**🔴 【胜】区比分概率（共13项）**</font>", unsafe_allow_html=True)
+    # 整合数据为 DataFrame
+    s_data = {
+        "比分": ["胜其他", "1:0", "2:0", "2:1", "3:0", "3:1", "3:2", "4:0", "4:1", "4:2", "5:0", "5:1", "5:2"],
+        "概率": [s_other, s_scores_raw["1:0"], s_scores_raw["2:0"], s_scores_raw["2:1"], s_scores_raw["3:0"], s_scores_raw["3:1"], s_scores_raw["3:2"], s_scores_raw["4:0"], s_scores_raw["4:1"], s_scores_raw["4:2"], s_scores_raw["5:0"], s_scores_raw["5:1"], s_scores_raw["5:2"]]
+    }
+    df_s = pd.DataFrame(s_data)
+    # 转置表格，让比分在首行，概率在下
+    df_s_T = df_s.set_index("比分").T
     
-    sc6, sc7, sc8, sc9, sc10 = st.columns(5)
-    sc6.metric("3:1", f"{s_scores['3:1']*100:.2f}%")
-    sc7.metric("3:2", f"{s_scores['3:2']*100:.2f}%")
-    sc8.metric("4:0", f"{s_scores['4:0']*100:.2f}%")
-    sc9.metric("4:1", f"{s_scores['4:1']*100:.2f}%")
-    sc10.metric("4:2", f"{s_scores['4:2']*100:.2f}%")
-    
-    sc11, sc12, sc13, _, _ = st.columns(5)
-    sc11.metric("5:0", f"{s_scores['5:0']*100:.2f}%")
-    sc12.metric("5:1", f"{s_scores['5:1']*100:.2f}%")
-    sc13.metric("5:2", f"{s_scores['5:2']*100:.2f}%")
-    
-    # 🟢 平局
-    st.markdown("<font color='green'>**🟢 【平】区比分概率（共5项）**</font>", unsafe_allow_html=True)
-    pc1, pc2, pc3, pc4, pc5 = st.columns(5)
-    pc1.metric("平其他", f"{max(p_other*100, 0.0):.2f}%")
-    pc2.metric("0:0", f"{p_scores['0:0']*100:.2f}%")
-    pc3.metric("1:1", f"{p_scores['1:1']*100:.2f}%")
-    pc4.metric("2:2", f"{p_scores['2:2']*100:.2f}%")
-    pc5.metric("3:3", f"{p_scores['3:3']*100:.2f}%")
+    # 🟢 【平】区表格
+    st.markdown("<font color='green' size='4'>**🟢 【平】区比分概率（共5项）**</font>", unsafe_allow_html=True)
+    p_data = {
+        "比分": ["平其他", "0:0", "1:1", "2:2", "3:3"],
+        "概率": [p_other, p_scores_raw["0:0"], p_scores_raw["1:1"], p_scores_raw["2:2"], p_scores_raw["3:3"]]
+    }
+    df_p = pd.DataFrame(p_data)
+    df_p_T = df_p.set_index("比分").T
 
-    # 🔵 客胜
-    st.markdown("<font color='blue'>**🔵 【负】区比分概率（共13项）**</font>", unsafe_allow_html=True)
-    fc1, fc2, fc3, fc4, fc5 = st.columns(5)
-    fc1.metric("负其他", f"{max(f_other*100, 0.0):.2f}%")
-    fc2.metric("0:1", f"{f_scores['0:1']*100:.2f}%")
-    fc3.metric("0:2", f"{f_scores['0:2']*100:.2f}%")
-    fc4.metric("1:2", f"{f_scores['1:2']*100:.2f}%")
-    fc5.metric("0:3", f"{f_scores['0:3']*100:.2f}%")
-    
-    fc6, fc7, fc8, fc9, fc10 = st.columns(5)
-    fc6.metric("1:3", f"{f_scores['1:3']*100:.2f}%")
-    fc7.metric("2:3", f"{f_scores['2:3']*100:.2f}%")
-    fc8.metric("0:4", f"{f_scores['0:4']*100:.2f}%")
-    fc9.metric("1:4", f"{f_scores['1:4']*100:.2f}%")
-    fc10.metric("2:4", f"{f_scores['2:4']*100:.2f}%")
-    
-    fc11, fc12, fc13, _, _ = st.columns(5)
-    fc11.metric("0:5", f"{f_scores['0:5']*100:.2f}%")
-    fc12.metric("1:5", f"{f_scores['1:5']*100:.2f}%")
-    fc13.metric("2:5", f"{f_scores['2:5']*100:.2f}%")
+    # 🔵 【负】区表格
+    st.markdown("<font color='blue' size='4'>**🔵 【负】区比分概率（共13项）**</font>", unsafe_allow_html=True)
+    f_data = {
+        "比分": ["负其他", "0:1", "0:2", "1:2", "0:3", "1:3", "2:3", "0:4", "1:4", "2:4", "0:5", "1:5", "2:5"],
+        "概率": [f_other, f_scores_raw["0:1"], f_scores_raw["0:2"], f_scores_raw["1:2"], f_scores_raw["0:3"], f_scores_raw["1:3"], f_scores_raw["2:3"], f_scores_raw["0:4"], f_scores_raw["1:4"], f_scores_raw["2:4"], f_scores_raw["0:5"], f_scores_raw["1:5"], f_scores_raw["2:5"]]
+    }
+    df_f = pd.DataFrame(f_data)
+    df_f_T = df_f.set_index("比分").T
+
+    # 定义一个内部函数，用于生成和渲染表格（含颜色和字体优化）
+    def render_hot_table(df_T, color_cmap):
+        # 1. 格式化：转为百分比
+        formatted_df = df_T.applymap(lambda x: f"{x*100:.2f}%")
+        
+        # 2. 颜色风格：使用 Pandas Styler 生成颜色
+        styled_df = formatted_df.style.background_gradient(
+            axis=1,            # 按行应用颜色
+            vmin=0.0,          # 颜色刻度起点为 0
+            vmax=df_T.values.max(), # 颜色刻度终点为当前表格最大概率
+            cmap=color_cmap,   # 颜色风格（胜区用Reds，平区用Greens，负区用Blues）
+            gmap=df_T.values   # **关键：颜色深浅依据原始概率值计算，而非格式化后的字符串**
+        ).set_properties(**{
+            'font-size': '12px',    # **字体变小 (默认是14px或16px)**
+            'text-align': 'center' # 居中对齐
+        })
+        
+        # 3. 在 Streamlit 中显示
+        st.dataframe(styled_df, use_container_width=True)
+
+    # 渲染三个区的表格
+    # 使用 st.cache_data 来避免重复渲染以提高速度
+    render_hot_table(df_s_T, 'Reds')   # 胜区用红色热力图
+    render_hot_table(df_p_T, 'Greens') # 平区用绿色热力图
+    render_hot_table(df_f_T, 'Blues')  # 负区用蓝色热力图
 
     st.divider()
 

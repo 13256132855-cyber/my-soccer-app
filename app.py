@@ -2,6 +2,22 @@ import streamlit as st
 import numpy as np
 import math
 import pandas as pd  # 导入 Pandas 用于制作精美表格
+
+# --- 4.1 新增：对攻大球因子修正函数 ---
+def adjust_xg_for_open_games(home_xg, away_xg, home_conceded, away_conceded):
+    """当两队防守都很差时，膨胀 xG，让分析器能点亮 3:2、2:3 等大比分."""
+    # 设定防守漏洞阈值，比如场均失球大于 1.5
+    if home_conceded > 1.5 and away_conceded > 1.5:
+        # 给原本的预期进球乘以 1.25 的膨胀系数
+        home_xg_final = home_xg * 1.25
+        away_xg_final = away_xg * 1.25
+        st.sidebar.warning("🔥 检测到两队防守均有漏洞，已激活对攻大球因子！")
+    else:
+        home_xg_final = home_xg
+        away_xg_final = away_xg
+
+    return home_xg_final, away_xg_final
+
 # 1. 页面基础配置
 st.set_page_config(page_title="竞彩全玩法分析器", layout="wide")
 st.title("🛡️ 竞彩全玩法 + 泊松模型 终极操盘复合分析器")

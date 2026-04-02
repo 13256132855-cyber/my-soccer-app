@@ -177,6 +177,10 @@ if st.button("🚀 启动复合交叉分析"):
     
     # 构建一个 0 到 6 球的比分概率矩阵 (7x7)
     matrix = np.zeros((7, 7))
+    # 🎯 注入对攻大球因子：在矩阵循环前修正 xG
+home_xg, away_xg = adjust_xg_for_open_games(
+    home_xg, away_xg, home_avg_lost, away_avg_lost
+)
     for i in range(7):
         for j in range(7):
             matrix[i][j] = poisson_prob(home_lambda, i) * poisson_prob(away_lambda, j)

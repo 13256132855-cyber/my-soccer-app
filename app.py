@@ -685,3 +685,62 @@ else:
         "🔍 当前输入的数据中，没有发现具备“正期望值”且符合凯利法则的捡漏比分。"
     )
 
+# ====================== 【优化补充内容】 ======================
+
+# 纯Python泊松函数（解决scipy报错）
+def poisson_pmf(k: int, lam: float) -> float:
+    """纯Python泊松概率质量函数"""
+    if k < 0 or lam <= 0:
+        return 0.0
+    return (lam ** k * math.exp(-lam)) / math.factorial(k)
+
+
+# 升级版对攻大球因子（替换原来的函数）
+def adjust_xg_for_open_games(home_xg, away_xg, home_conceded, away_conceded):
+    """更智能平滑的对攻大球因子"""
+    avg_conceded = (home_conceded + away_conceded) / 2
+    if avg_conceded > 1.8:
+        factor = 1.0 + 0.18 * (avg_conceded - 1.5)
+        st.sidebar.warning(f"🔥 对攻大球因子强烈激活！系数 ≈ {factor:.2f}")
+    elif avg_conceded > 1.45:
+        factor = 1.0 + 0.09 * (avg_conceded - 1.45)
+        st.sidebar.info(f"⚡ 轻度对攻因子激活，系数 ≈ {factor:.2f}")
+    else:
+        factor = 1.0
+    return home_xg * factor, away_xg * factor
+
+
+# 在 if st.button("🚀 启动复合交叉分析"):  内部的核心计算部分，替换为下面这段（找到原来的矩阵计算部分替换）：
+
+    # ==================== 以下替换原来 if st.button 里面的计算逻辑 ====================
+    st.success("分析器启动成功！")
+
+    # 使用升级版大球因子
+    home_lambda_final, away_lambda_final = adjust_xg_for_open_games(
+        home_lambda, away_lambda, home_avg_lost, away_avg_lost
+    )
+
+    # 新增 Dixon-Coles ρ 参数（侧边栏控制）
+    rho = st.sidebar.slider("Dixon-Coles ρ (低比分修正，建议 0.05\~0.15)", 0.0, 0.3, 0.10, 0.01)
+
+    # 升级概率矩阵（扩大到9球 + Dixon-Coles修正）
+    matrix = np.zeros((9, 9))
+    for i in range(9):
+        for j in range(9):
+            base_prob = poisson_pmf(i, home_lambda_final) * poisson_pmf(j, away_lambda_final)
+            # Dixon-Coles 修正
+            if i == 0 and j == 0:
+                tau = 1 - rho
+            elif (i == 0 and j == 1) or (i == 1 and j == 0):
+                tau = 1 + rho
+            elif i == 1 and j == 1:
+                tau = 1 - rho
+            else:
+                tau = 1.0
+            matrix[i][j] = base_prob * tau
+
+    matrix /= matrix.sum()   # 归一化
+
+    # 后面的 prob_win、prob_draw、prob_lose、s_scores_raw 等计算保持你原来代码不变
+    # 只需把原来 for i in range(7) 改成 range(9) 即可
+

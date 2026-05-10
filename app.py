@@ -1,40 +1,36 @@
 
 import math
 import numpy as np
-import pandas as pd
+import pandas as pd  # 导入 Pandas 用于制作精美表格
 import streamlit as st
 
-# ====================== 新增：纯Python泊松函数（解决scipy报错） ======================
-def poisson_pmf(k: int, lam: float) -> float:
-    """纯Python泊松概率质量函数"""
-    if k < 0 or lam <= 0:
-        return 0.0
-    return (lam ** k * math.exp(-lam)) / math.factorial(k)
 
-# --- 升级版：对攻大球因子 ---
+# --- 4.1 新增：对攻大球因子修正函数 ---
 def adjust_xg_for_open_games(home_xg, away_xg, home_conceded, away_conceded):
-    """更平滑的对攻大球因子"""
-    avg_conceded = (home_conceded + away_conceded) / 2
-    if avg_conceded > 1.8:
-        factor = 1.0 + 0.18 * (avg_conceded - 1.5)
-        st.sidebar.warning(f"🔥 对攻大球因子强烈激活！系数 ≈ {factor:.2f}")
-    elif avg_conceded > 1.45:
-        factor = 1.0 + 0.09 * (avg_conceded - 1.45)
-        st.sidebar.info(f"⚡ 轻度对攻因子激活，系数 ≈ {factor:.2f}")
+    """当两队防守都很差时，膨胀 xG，让分析器能点亮 3:2、2:3 等大比分."""
+    # 设定防守漏洞阈值，比如场均失球大于 1.5
+    if home_conceded > 1.5 and away_conceded > 1.5:
+        # 给原本的预期进球乘以 1.25 的膨胀系数
+        home_xg_final = home_xg * 1.25
+        away_xg_final = away_xg * 1.25
+        st.sidebar.warning("🔥 检测到两队防守均有漏洞，已激活对攻大球因子！")
     else:
-        factor = 1.0
-    return home_xg * factor, away_xg * factor
+        home_xg_final = home_xg
+        away_xg_final = away_xg
+
+    return home_xg_final, away_xg_final
+
 
 # 1. 页面基础配置
-st.set_page_config(page_title="竞彩专业分析器 v2.1", layout="wide")
-st.title("🛡️ 竞彩全玩法 + Dixon-Coles 专业复合分析器")
+st.set_page_config(page_title="竞彩全玩法分析器", layout="wide")
+st.title("🛡️ 竞彩全玩法 + 泊松模型 终极操盘复合分析器")
 st.write(
-    "优化版：Dixon-Coles低比分修正 + 智能大球因子 + 纯Python实现"
+    "完全按照竞彩官方排版顺序整合：含所有玩法、盈亏数据、泊松分布完整31项比分精算（含热力图大表）。"
 )
 
 st.divider()
 
-# ================= 第一步：赔率数据录入（完全保留） =================
+# ================= 第一步：赔率数据录入（按截图顺序） =================
 st.header("第一步：录入官方赔率数据")
 
 # ---- 1. 胜平负 ----
@@ -44,11 +40,14 @@ win_odd = col1.number_input("胜", 1.0, 1000.0, 1.11, 0.01)
 draw_odd = col2.number_input("平", 1.0, 1000.0, 7.10, 0.01)
 lose_odd = col3.number_input("负", 1.0, 1000.0, 11.50, 0.01)
 
-# ---- 2. 让球胜平负 ----
+# ---- 2. 让球胜平负（动态调节版） ----
 st.subheader("【2. 让球 赔率】")
 handicap_val = st.number_input(
     "请输入具体让球数 (如让2球填 -2, 受让1球填 1)",
-    min_value=-10, max_value=10, value=-2, step=1,
+    min_value=-10,
+    max_value=10,
+    value=-2,
+    step=1,
 )
 if handicap_val < 0:
     h_label = f"让球({handicap_val})"
@@ -144,8 +143,8 @@ sc_25 = f_cols3[2].number_input("2:5", 1.0, 1000.0, 300.0, 1.0)
 
 st.divider()
 
-# ================= 第二步：资金面数据录入（完全保留） =================
-st.header("第二步：录入冷热与资金盈亏面")
+# ================= 第二步：资金面数据录入 =================
+st.header("第二步：录入冷热与资金盈亏面（用于捕捉反向异动）")
 
 # 胜平负资金面
 st.subheader("【1. 胜平负 投注与盈亏数据】")
@@ -163,62 +162,66 @@ lose_prof = col_z3.number_input("客胜 庄家盈亏 (%)", -500.0, 500.0, -164.5
 st.subheader(f"【2. {h_label} 投注与盈亏数据】")
 col_zq1, col_zq2, col_zq3 = st.columns(3)
 rq_win_bet = col_zq1.number_input(f"{h_label}-胜 投注比例 (%)", 0.0, 100.0, 53.0, 0.1)
-rq_win_prof = col_zq1.number_input(f"{h_label}-胜 庄家盈亏 (%)", -500.0, 500.0, -9.18, 0.1)
+rq_win_prof = col_zq1.number_input(
+    f"{h_label}-胜 庄家盈亏 (%)", -500.0, 500.0, -9.18, 0.1
+)
 
 rq_draw_bet = col_zq2.number_input(f"{h_label}-平 投注比例 (%)", 0.0, 100.0, 27.0, 0.1)
-rq_draw_prof = col_zq2.number_input(f"{h_label}-平 庄家盈亏 (%)", -500.0, 500.0, -8.0, 0.1)
+rq_draw_prof = col_zq2.number_input(
+    f"{h_label}-平 庄家盈亏 (%)", -500.0, 500.0, -8.0, 0.1
+)
 
 rq_lose_bet = col_zq3.number_input(f"{h_label}-负 投注比例 (%)", 0.0, 100.0, 20.0, 0.1)
 rq_prof = col_zq3.number_input(f"{h_label}-负 庄家盈亏 (%)", -500.0, 500.0, 49.2, 0.1)
 
 st.divider()
 
-# ================= 第三步：硬核计算区（核心升级） =================
-st.header("第三步：Dixon-Coles 专业精算")
+# ================= 第三步：硬核计算区 =================
+st.header("第三步：泊松模型独立精算")
 
 col_p1, col_p2 = st.columns(2)
-home_lambda = col_p1.number_input("主队预期进球数 (λ1)", 0.1, 10.0, 1.5, 0.05)
-away_lambda = col_p2.number_input("客队预期进球数 (λ2)", 0.1, 10.0, 1.2, 0.05)
+home_lambda = col_p1.number_input("主队预期进球数 (λ1)", 0.1, 10.0, 1.5, 0.1)
+away_lambda = col_p2.number_input("客队预期进球数 (λ2)", 0.1, 10.0, 1.2, 0.1)
 
+# 💡 新增：为了支撑“大球因子”，我们必须在这里输入两队的场均失球数
 col_p3, col_p4 = st.columns(2)
-home_avg_lost = col_p3.number_input("主队场均失球数", 0.0, 10.0, 1.0, 0.1)
-away_avg_lost = col_p4.number_input("客队场均失球数", 0.0, 10.0, 1.0, 0.1)
+home_avg_lost = col_p3.number_input(
+    "主队场均失球数（判定对攻漏洞）", 0.0, 10.0, 1.0, 0.1
+)
+away_avg_lost = col_p4.number_input(
+    "客队场均失球数（判定对攻漏洞）", 0.0, 10.0, 1.0, 0.1
+)
 
-if st.button("🚀 启动 Dixon-Coles 复合分析", type="primary"):
+
+# 泊松公式
+def poisson_prob(lmbda, k):
+    return (math.pow(lmbda, k) * math.exp(-lmbda)) / math.factorial(k)
+
+
+if st.button("🚀 启动复合交叉分析"):
     st.success("分析器启动成功！")
 
-    # 升级大球因子
+    # 构建一个 0 到 6 球的比分概率矩阵 (7x7)
+    matrix = np.zeros((7, 7))
+
+    # 🎯 注入对攻大球因子：将输入的 lambda 先通过函数进行判断和修正
     home_lambda_final, away_lambda_final = adjust_xg_for_open_games(
         home_lambda, away_lambda, home_avg_lost, away_avg_lost
     )
 
-    # Dixon-Coles ρ 参数
-    rho = st.sidebar.slider("Dixon-Coles ρ 参数（低比分修正 建议0.05-0.15）", 0.0, 0.3, 0.10, 0.01)
+    for i in range(7):
+        for j in range(7):
+            # 这里的计算已经换成了经过过滤后的 home_lambda_final 和 away_lambda_final
+            matrix[i][j] = poisson_prob(home_lambda_final, i) * poisson_prob(
+                away_lambda_final, j
+            )
 
-    # 构建概率矩阵（升级版）
-    matrix = np.zeros((9, 9))
-    for i in range(9):
-        for j in range(9):
-            base_prob = poisson_pmf(i, home_lambda_final) * poisson_pmf(j, away_lambda_final)
-            # Dixon-Coles 修正
-            if i == 0 and j == 0:
-                tau = 1 - rho
-            elif (i == 0 and j == 1) or (i == 1 and j == 0):
-                tau = 1 + rho
-            elif i == 1 and j == 1:
-                tau = 1 - rho
-            else:
-                tau = 1.0
-            matrix[i][j] = base_prob * tau
-
-    matrix /= matrix.sum()
-
-    # 计算胜平负概率
-    prob_win = 0.0
-    prob_draw = 0.0
-    prob_lose = 0.0
-    for i in range(9):
-        for j in range(9):
+    # 计算胜平负总概率
+    prob_win = 0.0  # 主胜总概率
+    prob_draw = 0.0  # 平局总概率
+    prob_lose = 0.0  # 客胜总概率
+    for i in range(7):
+        for j in range(7):
             if i > j:
                 prob_win += matrix[i][j]
             elif i == j:
@@ -226,32 +229,57 @@ if st.button("🚀 启动 Dixon-Coles 复合分析", type="primary"):
             else:
                 prob_lose += matrix[i][j]
 
-    prob_under_25 = np.sum(matrix[0:3, 0:3])
-    prob_over_25 = 1 - prob_under_25
+    # 计算大小球2.5概率
+    prob_under_25 = 0.0
+    for i in range(7):
+        for j in range(7):
+            if (i + j) < 2.5:
+                prob_under_25 += matrix[i][j]
+    prob_over_25 = 1.0 - prob_under_25
 
-    # ================= 以下完全保留你原来的代码（从这里开始粘贴你原来的内容） =================
     # 1. 计算比分概率
     s_scores_raw = {
-        "1:0": matrix[1][0], "2:0": matrix[2][0], "2:1": matrix[2][1],
-        "3:0": matrix[3][0], "3:1": matrix[3][1], "3:2": matrix[3][2],
-        "4:0": matrix[4][0], "4:1": matrix[4][1], "4:2": matrix[4][2],
-        "5:0": matrix[5][0], "5:1": matrix[5][1], "5:2": matrix[5][2],
+        "1:0": matrix[1][0],
+        "2:0": matrix[2][0],
+        "2:1": matrix[2][1],
+        "3:0": matrix[3][0],
+        "3:1": matrix[3][1],
+        "3:2": matrix[3][2],
+        "4:0": matrix[4][0],
+        "4:1": matrix[4][1],
+        "4:2": matrix[4][2],
+        "5:0": matrix[5][0],
+        "5:1": matrix[5][1],
+        "5:2": matrix[5][2],
     }
     s_other = max(prob_win - sum(s_scores_raw.values()), 0.0)
 
-    p_scores_raw = {"0:0": matrix[0][0], "1:1": matrix[1][1], "2:2": matrix[2][2], "3:3": matrix[3][3]}
+    p_scores_raw = {
+        "0:0": matrix[0][0],
+        "1:1": matrix[1][1],
+        "2:2": matrix[2][2],
+        "3:3": matrix[3][3],
+    }
     p_other = max(prob_draw - sum(p_scores_raw.values()), 0.0)
 
     f_scores_raw = {
-        "0:1": matrix[0][1], "0:2": matrix[0][2], "1:2": matrix[1][2],
-        "0:3": matrix[0][3], "1:3": matrix[1][3], "2:3": matrix[2][3],
-        "0:4": matrix[0][4], "1:4": matrix[1][4], "2:4": matrix[2][4],
-        "0:5": matrix[0][5], "1:5": matrix[1][5], "2:5": matrix[2][5],
+        "0:1": matrix[0][1],
+        "0:2": matrix[0][2],
+        "1:2": matrix[1][2],
+        "0:3": matrix[0][3],
+        "1:3": matrix[1][3],
+        "2:3": matrix[2][3],
+        "0:4": matrix[0][4],
+        "1:4": matrix[1][4],
+        "2:4": matrix[2][4],
+        "0:5": matrix[0][5],
+        "1:5": matrix[1][5],
+        "2:5": matrix[2][5],
     }
     f_other = max(prob_lose - sum(f_scores_raw.values()), 0.0)
 
-    # 2. 输出宏观概率（保留原来样式）
-    st.markdown("### 📊 Dixon-Coles 模型预测结果全景图")
+    # 2. 输出宏观概率
+    st.markdown("### 📊 泊松模型预测结果全景图")
     col_res1, col_res2 = st.columns(2)
     with col_res1:
         st.markdown("**【胜平负大势概率】**")
@@ -263,12 +291,397 @@ if st.button("🚀 启动 Dixon-Coles 复合分析", type="primary"):
         st.write(f"* 小球（< 2.5球）: `{prob_under_25*100:.2f}%`")
         st.write(f"* 大球（> 2.5球）: `{prob_over_25*100:.2f}%`")
 
-    # 后面的 31项比分表格、EV价值挖掘、凯利准则 全部保留你原来的代码
-    # （请把你原始代码中从 “# 🏆 3. 核心功能实现：制作 31 项比分表格” 开始到最后的所有代码粘贴到这里）
+    st.divider()
 
-    st.success("✅ Dixon-Coles 模型已生效，低比分预测更准确！")
+    # 🏆 3. 核心功能实现：制作 31 项比分表格（概率在下，字体变小）
+    st.markdown("### 🏆 竞彩官方 31 项比分全维度概率精算（高亮高概率）")
 
-# ================= 第五步：凯利准则（保留你原来代码） =================
-# 把你原来的凯利部分直接放在这里即可
+    # 辅助函数：根据概率大小生成背景色的CSS
+    def get_color(prob, max_prob, base_color):
+        if max_prob == 0:
+            return ""
+        # 按照当前格子的概率占最高概率的比例，分配透明度(0.1 ~ 0.8)
+        alpha = 0.1 + 0.7 * (prob / max_prob)
+        if base_color == "red":
+            return f"background-color: rgba(255, 0, 0, {alpha});"
+        elif base_color == "green":
+            return f"background-color: rgba(0, 128, 0, {alpha});"
+        elif base_color == "blue":
+            return f"background-color: rgba(0, 0, 255, {alpha});"
+        return ""
 
-st.caption("v2.1 优化版 | 在你原代码基础上升级 | Dixon-Coles + 纯Python"
+    # 🔴 【胜】区表格
+    st.markdown(
+        "<font color='red' size='4'>**🔴 【胜】区比分概率（共13项）**</font>",
+        unsafe_allow_html=True,
+    )
+    s_labels = [
+        "胜其他",
+        "1:0",
+        "2:0",
+        "2:1",
+        "3:0",
+        "3:1",
+        "3:2",
+        "4:0",
+        "4:1",
+        "4:2",
+        "5:0",
+        "5:1",
+        "5:2",
+    ]
+    s_vals = [
+        s_other,
+        s_scores_raw["1:0"],
+        s_scores_raw["2:0"],
+        s_scores_raw["2:1"],
+        s_scores_raw["3:0"],
+        s_scores_raw["3:1"],
+        s_scores_raw["3:2"],
+        s_scores_raw["4:0"],
+        s_scores_raw["4:1"],
+        s_scores_raw["4:2"],
+        s_scores_raw["5:0"],
+        s_scores_raw["5:1"],
+        s_scores_raw["5:2"],
+    ]
+
+    max_s = max(s_vals) if s_vals else 1.0
+    s_html = "<div style='overflow-x:auto;'><table style='width:100%; text-align:center; border-collapse:collapse; font-size:12px; border:1px solid #ddd;'>"
+    s_html += (
+        "<tr>"
+        + "".join(
+            [
+                f"<th style='border:1px solid #ddd; padding:4px; background-color:#f9f9f9;'>{lbl}</th>"
+                for lbl in s_labels
+            ]
+        )
+        + "</tr>"
+    )
+    s_html += (
+        "<tr>"
+        + "".join(
+            [
+                f"<td style='border:1px solid #ddd; padding:4px; {get_color(v, max_s, 'red')}'>{v*100:.2f}%</td>"
+                for v in s_vals
+            ]
+        )
+        + "</tr>"
+    )
+    s_html += "</table></div>"
+    st.markdown(s_html, unsafe_allow_html=True)
+
+    # 🟢 【平】区表格
+    st.markdown(
+        "<br><font color='green' size='4'>**🟢 【平】区比分概率（共5项）**</font>",
+        unsafe_allow_html=True,
+    )
+    p_labels = ["平其他", "0:0", "1:1", "2:2", "3:3"]
+    p_vals = [
+        p_other,
+        p_scores_raw["0:0"],
+        p_scores_raw["1:1"],
+        p_scores_raw["2:2"],
+        p_scores_raw["3:3"],
+    ]
+
+    max_p = max(p_vals) if p_vals else 1.0
+    p_html = "<div style='overflow-x:auto;'><table style='width:100%; text-align:center; border-collapse:collapse; font-size:12px; border:1px solid #ddd;'>"
+    p_html += (
+        "<tr>"
+        + "".join(
+            [
+                f"<th style='border:1px solid #ddd; padding:4px; background-color:#f9f9f9;'>{lbl}</th>"
+                for lbl in p_labels
+            ]
+        )
+        + "</tr>"
+    )
+    p_html += (
+        "<tr>"
+        + "".join(
+            [
+                f"<td style='border:1px solid #ddd; padding:4px; {get_color(v, max_p, 'green')}'>{v*100:.2f}%</td>"
+                for v in p_vals
+            ]
+        )
+        + "</tr>"
+    )
+    p_html += "</table></div>"
+    st.markdown(p_html, unsafe_allow_html=True)
+
+    # 🔵 【负】区表格
+    st.markdown(
+        "<br><font color='blue' size='4'>**🔵 【负】区比分概率（共13项）**</font>",
+        unsafe_allow_html=True,
+    )
+    f_labels = [
+        "负其他",
+        "0:1",
+        "0:2",
+        "1:2",
+        "0:3",
+        "1:3",
+        "2:3",
+        "0:4",
+        "1:4",
+        "2:4",
+        "0:5",
+        "1:5",
+        "2:5",
+    ]
+    f_vals = [
+        f_other,
+        f_scores_raw["0:1"],
+        f_scores_raw["0:2"],
+        f_scores_raw["1:2"],
+        f_scores_raw["0:3"],
+        f_scores_raw["1:3"],
+        f_scores_raw["2:3"],
+        f_scores_raw["0:4"],
+        f_scores_raw["1:4"],
+        f_scores_raw["2:4"],
+        f_scores_raw["0:5"],
+        f_scores_raw["1:5"],
+        f_scores_raw["2:5"],
+    ]
+
+    max_f = max(f_vals) if f_vals else 1.0
+    f_html = "<div style='overflow-x:auto;'><table style='width:100%; text-align:center; border-collapse:collapse; font-size:12px; border:1px solid #ddd;'>"
+    f_html += (
+        "<tr>"
+        + "".join(
+            [
+                f"<th style='border:1px solid #ddd; padding:4px; background-color:#f9f9f9;'>{lbl}</th>"
+                for lbl in f_labels
+            ]
+        )
+        + "</tr>"
+    )
+    f_html += (
+        "<tr>"
+        + "".join(
+            [
+                f"<td style='border:1px solid #ddd; padding:4px; {get_color(v, max_f, 'blue')}'>{v*100:.2f}%</td>"
+                for v in f_vals
+            ]
+        )
+        + "</tr>"
+    )
+    f_html += "</table></div>"
+    st.markdown(f_html, unsafe_allow_html=True)
+
+    st.divider()
+
+    # ================= 第四步：机构级期望值（Value Bet）挖掘模块 =================
+    st.divider()
+    st.header("第四步：博弈期望值（Value Bet）深度挖掘")
+    st.write("💡 庄家视角：寻找【真实概率 × 官方赔率 > 1】的数学漏洞。")
+
+    # 1. 计算胜平负的机构抽水与隐含概率
+    # 隐含概率 = 1 / 赔率
+    implied_win = 1 / win_odd
+    implied_draw = 1 / draw_odd
+    implied_lose = 1 / lose_odd
+    total_implied = implied_win + implied_draw + implied_lose
+
+    # 算出官方在这场比赛胜平负玩法的抽水（返还率 = 1 / total_implied）
+    return_rate = (1 / total_implied) * 100
+
+    col_v1, col_v2 = st.columns(2)
+    with col_v1:
+        st.markdown("**【市场隐含概率 vs 你的泊松概率】**")
+        st.write(
+            f"* 官方测定主胜概率: `{implied_win/total_implied*100:.2f}%` (你算出: `{prob_win*100:.2f}%`)"
+        )
+        st.write(
+            f"* 官方测定平局概率: `{implied_draw/total_implied*100:.2f}%` (你算出: `{prob_draw*100:.2f}%`)"
+        )
+        st.write(
+            f"* 官方测定客胜概率: `{implied_lose/total_implied*100:.2f}%` (你算出: `{prob_lose*100:.2f}%`)"
+        )
+    with col_v2:
+        st.markdown("**【机构风控指标】**")
+        st.write(
+            f"* 本场官方原始抽水（Overround）: `{(total_implied - 1)*100:.2f}%`"
+        )
+        st.write(f"* 理论返还率（Payout）: `{return_rate:.2f}%`")
+
+    # 2. 计算期望值 (Value = 泊松概率 * 官方赔率)
+    ev_win = prob_win * win_odd
+    ev_draw = prob_draw * draw_odd
+    ev_lose = prob_lose * lose_odd
+
+    st.markdown("### 🎯 胜平负玩法期望值（EV）")
+    st.write(
+        "注：EV > 1.00 说明该选项赔率被机构低估，具备长期投注的“正期望值”价值。"
+    )
+
+    # 制作胜平负期望值表格
+    ev_data = {
+        "玩法选项": ["主胜 (3)", "平局 (1)", "客胜 (0)"],
+        "官方赔率": [win_odd, draw_odd, lose_odd],
+        "你的理论概率": [
+            f"{prob_win*100:.2f}%",
+            f"{prob_draw*100:.2f}%",
+            f"{prob_lose*100:.2f}%",
+        ],
+        "期望值 (EV)": [round(ev_win, 3), round(ev_draw, 3), round(ev_lose, 3)],
+    }
+    ev_df = pd.DataFrame(ev_data)
+
+    # 用颜色高亮EV > 1.0 的行
+    def highlight_ev(row):
+        return [
+            "background-color: rgba(0, 128, 0, 0.2)"
+            if row["期望值 (EV)"] > 1.0
+            else ""
+            for _ in row
+        ]
+
+    st.dataframe(
+        ev_df.style.apply(highlight_ev, axis=1), use_container_width=True
+    )
+
+    # 3. 进阶：比分玩法的极限捡漏（找出Top 3高价值比分）
+    st.markdown("### 💎 31项比分高价值捡漏雷达")
+
+    all_scores = []
+    # 整合胜区
+    for lbl, prob in zip(s_labels, s_vals):
+        all_scores.append(
+            {
+                "比分": lbl,
+                "概率": prob,
+                "赔率": globals().get(f"sc_{lbl.replace(':', '')}")
+                if lbl != "胜其他"
+                else sc_w_other,
+            }
+        )
+    # 整合平区
+    for lbl, prob in zip(p_labels, p_vals):
+        all_scores.append(
+            {
+                "比分": lbl,
+                "概率": prob,
+                "赔率": globals().get(f"sc_{lbl.replace(':', '')}")
+                if lbl != "平其他"
+                else sc_p_other,
+            }
+        )
+    # 整合负区
+    for lbl, prob in zip(f_labels, f_vals):
+        all_scores.append(
+            {
+                "比分": lbl,
+                "概率": prob,
+                "赔率": globals().get(f"sc_{lbl.replace(':', '')}")
+                if lbl != "负其他"
+                else sc_f_other,
+            }
+        )
+
+    # 计算每个比分的EV
+    for item in all_scores:
+        if item["赔率"] is not None:
+            item["期望值 (EV)"] = round(item["概率"] * item["赔率"], 3)
+        else:
+            item["期望值 (EV)"] = 0.0
+
+    # 排序，找出EV最高的比分
+    sorted_scores = sorted(
+        all_scores, key=lambda x: x["期望值 (EV)"], reverse=True
+    )
+
+    top_n = 3
+    st.write(
+        f"根据您的泊松输入，本场 EV 最高的 **前 {top_n} 个** 捡漏比分如下："
+    )
+
+    for i in range(min(top_n, len(sorted_scores))):
+        best = sorted_scores[i]
+        if best["期望值 (EV)"] > 1.0:
+            st.success(
+                f"🔥 排名第 {i+1}：比分 **{best['比分']}** | 概率: `{best['概率']*100:.2f}%` | 赔率: `{best['赔率']}` | **EV: {best['期望值 (EV)']}** (极具博取价值！)"
+            )
+        else:
+            st.warning(
+                f"ℹ️ 排名第 {i+1}：比分 **{best['比分']}** | 概率: `{best['概率']*100:.2f}%` | 赔率: `{best['赔率']}` | **EV: {best['期望值 (EV)']}** (暂未发现绝对数学漏洞)"
+            )
+
+# ================= 第五步：凯利准则智能仓位控制 =================
+st.divider()
+st.header("第五步：凯利准则（Kelly）智能仓位管理")
+st.write(
+    "💰 模型将根据上面扫出的“正期望值”比分，自动计算出最科学的资金分配比例。"
+)
+
+# 1. 设定总本金
+total_bankroll = st.number_input(
+    "请输入你的操盘总本金（元）：", min_value=100, value=10000, step=100
+)
+risk_factor = st.slider(
+    "操盘风险系数（建议使用 0.25 即四分之一凯利，更稳健）",
+    0.05,
+    1.0,
+    0.25,
+    0.05,
+)
+
+st.markdown(
+    "### 🎯 推荐投注仓位（仅展示 EV > 1.0 且仓位 > 0 的捡漏选项）"
+)
+
+kelly_results = []
+
+# 直接复用你代码里的 all_scores 变量
+for item in sorted_scores:
+    prob = item.get("概率", 0)
+    odds = item.get("赔率", 0)
+    label = item.get("比分", "未知")
+
+    if odds and odds > 1:  # 赔率必须大于1才有意义
+        # ⚠️ 修复原Bug：泊松算出的 prob 本身就是类似 0.15 的小数，不需要再除以 100！
+        p = prob
+        b = odds - 1.0
+        q = 1.0 - p
+
+        kelly_percent = (p * b - q) / b if b > 0 else 0
+
+        # 计算 EV
+        ev = p * odds
+
+        # 只有当 EV > 1 且凯利算出来的仓位大于 0 时才推荐
+        if ev > 1.00 and kelly_percent > 0:
+            adjusted_kelly = kelly_percent * risk_factor  # 乘以风险系数（分注）
+            bet_money = total_bankroll * adjusted_kelly
+
+            kelly_results.append(
+                {
+                    "比分": label,
+                    "期望值(EV)": round(ev, 3),
+                    "理论概率": f"{round(prob * 100, 2)}%",  # 展示时乘以100还原百分比
+                    "官方赔率": odds,
+                    "建议仓位": f"{round(adjusted_kelly * 100, 2)}%",
+                    "建议投注金额": f"{round(bet_money, 2)} 元",
+                }
+            )
+
+# 3. 输出表格
+if kelly_results:
+    import pandas as pd
+
+    # 按照期望值从大到小排序
+    df_kelly = pd.DataFrame(kelly_results)
+    st.dataframe(
+        df_kelly.sort_values(by="期望值(EV)", ascending=False),
+        use_container_width=True,
+    )
+    st.success(
+        "💡 策略提示：凯利公式是基于大数定律的数学最优解，切勿重仓梭哈，严格按照分注（如1/4凯利）执行方能复利增长！"
+    )
+else:
+    st.warning(
+        "🔍 当前输入的数据中，没有发现具备“正期望值”且符合凯利法则的捡漏比分。"
+    )
+

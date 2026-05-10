@@ -685,3 +685,77 @@ else:
         "🔍 当前输入的数据中，没有发现具备“正期望值”且符合凯利法则的捡漏比分。"
     )
 
+# ====================== 【优化补充内容】 ======================
+
+# 纯Python泊松函数（解决scipy报错）
+def poisson_pmf(k, lam):
+    """纯Python泊松概率质量函数"""
+    if k < 0 or lam <= 0:
+        return 0.0
+    return (lam ** k * math.exp(-lam)) / math.factorial(k)
+
+
+# 升级版对攻大球因子
+def adjust_xg_for_open_games(home_xg, away_xg, home_conceded, away_conceded):
+    """升级版对攻大球因子"""
+    avg_conceded = (home_conceded + away_conceded) / 2
+    if avg_conceded > 1.8:
+        factor = 1.25
+        st.sidebar.warning("🔥 对攻大球因子强烈激活！×1.25")
+    elif avg_conceded > 1.4:
+        factor = 1.15
+        st.sidebar.info(f"⚡ 对攻因子激活 ×{factor}")
+    else:
+        factor = 1.0
+    return home_xg * factor, away_xg * factor
+
+
+# ==================== 在 if st.button("🚀 启动复合交叉分析"): 里面替换原来的矩阵计算部分 ====================
+
+    # 【新增/替换的计算逻辑】
+    st.success("分析器启动成功！")
+
+    # 使用升级大球因子
+    home_lambda_final, away_lambda_final = adjust_xg_for_open_games(
+        home_lambda, away_lambda, home_avg_lost, away_avg_lost
+    )
+
+    # Dixon-Coles ρ 参数
+    rho = st.sidebar.slider("Dixon-Coles ρ (低比分修正)", 0.0, 0.25, 0.12, 0.01)
+
+    # 升级概率矩阵
+    max_goals = 8
+    matrix = np.zeros((max_goals + 1, max_goals + 1))
+    for i in range(max_goals + 1):
+        for j in range(max_goals + 1):
+            base_prob = poisson_pmf(i, home_lambda_final) * poisson_pmf(j, away_lambda_final)
+            tau = 1.0
+            if i == 0 and j == 0:
+                tau = 1 - rho
+            elif (i == 0 and j == 1) or (i == 1 and j == 0):
+                tau = 1 + rho
+            elif i == 1 and j == 1:
+                tau = 1 - rho
+            matrix[i][j] = base_prob * tau
+
+    matrix /= matrix.sum()
+
+    # 计算胜平负概率
+    prob_win = 0.0
+    prob_draw = 0.0
+    prob_lose = 0.0
+    for i in range(max_goals + 1):
+        for j in range(max_goals + 1):
+            if i > j:
+                prob_win += matrix[i][j]
+            elif i == j:
+                prob_draw += matrix[i][j]
+            else:
+                prob_lose += matrix[i][j]
+
+    prob_under_25 = np.sum(matrix[0:3, 0:3])
+    prob_over_25 = 1 - prob_under_25
+
+    # 后面的 s_scores_raw、p_scores_raw、f_scores_raw、表格、EV、凯利等代码保持你原来不变
+    # 只需把原来的 s_scores_raw 等字典里的 matrix[索引] 继续使用即可
+
